@@ -173,7 +173,7 @@ namespace ohm {
     template<typename T>
     struct printable<T, typename std::enable_if<
             is_iterable<T>::value &&
-            is_printable<typename add_star<typename has_begin<T>::type>::type>::value &&
+            is_printable<typename has_iterator<T>::value_type>::value &&
             !has_defined_function_operator_left_shift<T>::value &&
             !has_defined_member_operator_left_shift<T>::value
             >::type> {
@@ -206,15 +206,6 @@ namespace ohm {
             out << ", ";
             stream_print(out, x.second);
             out << ")";
-        }
-    };
-
-    template<>
-    struct printable<std::basic_ostream<char>&(std::basic_ostream<char>&)> {
-        using FUNC = std::basic_ostream<char>&(*)(std::basic_ostream<char>&);
-        void print(std::ostream &out, const FUNC &x) {
-            auto tmp = x;
-            tmp(out);
         }
     };
 }

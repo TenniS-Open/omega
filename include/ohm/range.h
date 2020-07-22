@@ -34,6 +34,8 @@ namespace ohm {
     public:
         using self = Range;
 
+        using value_type = T;
+
         explicit Range(T end) : self(T(0), end, T(1)) {}
 
         Range(T begin, T end) : self(begin, end, T(1)) {}
@@ -94,6 +96,8 @@ namespace ohm {
     >::type> {
     public:
         using self = Range;
+
+        using value_type = T;
 
         explicit Range(T end) : self(T(0), end, T(1)) {}
 
@@ -189,10 +193,6 @@ namespace ohm {
         using T = _Begin;
         return Range<T>(begin);
     }
-
-    inline std::vector<int32_t> ruler();
-
-    inline std::vector<std::pair<int32_t, int32_t>> chunk();
 }
 
 #endif //OMEGA_RANGE_H

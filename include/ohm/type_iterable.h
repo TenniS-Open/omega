@@ -6,6 +6,7 @@
 #define OMEGA_TYPE_ITERABLE_H
 
 #include <iterator>
+#include "type_cast.h"
 
 namespace ohm {
     template<typename T>
@@ -83,6 +84,21 @@ namespace ohm {
     struct is_iterable : public std::integral_constant<bool,
             std::is_same<typename has_begin<T>::type, typename has_end<T>::type>::value &&
             has_iterator_tag<typename has_begin<T>::type, std::input_iterator_tag>::value> {
+    };
+
+    template<typename T, typename Enable = void>
+    struct has_iterator {
+    public:
+        using value_type = void;
+        static constexpr bool value = false;
+    };
+
+    template<typename T>
+    struct has_iterator<T, typename std::enable_if<is_iterable<T>::value>::type> {
+    public:
+        static constexpr bool value = true;
+        using value_type = typename remove_cr<
+                typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>::type;
     };
 }
 
