@@ -12,7 +12,9 @@
 
 namespace ohm {
     template<typename T, typename K, typename Enable=void>
-    struct up_type;
+    struct up_type {
+        using type = void;
+    };
 
     template<typename T, typename K>
     struct up_type<T, K, typename std::enable_if<
@@ -20,6 +22,25 @@ namespace ohm {
     >::type> {
     public:
         using type = decltype(std::declval<T>() + std::declval<K>());
+    };
+
+    template<typename T, typename K>
+    struct up_type<T, K, typename std::enable_if<
+            !(std::is_arithmetic<T>::value && std::is_arithmetic<K>::value) &&
+            std::is_convertible<K, T>::value
+    >::type> {
+    public:
+        using type = T;
+    };
+
+    template<typename T, typename K>
+    struct up_type<T, K, typename std::enable_if<
+            !(std::is_arithmetic<T>::value && std::is_arithmetic<K>::value) &&
+            !std::is_convertible<K, T>::value &&
+            std::is_convertible<T, K>::value
+    >::type> {
+    public:
+        using type = K;
     };
 
     template<typename T, typename... Args>
@@ -40,6 +61,10 @@ namespace ohm {
         using supper = std::logic_error;
 
         RangeStepZeroException() : supper("Range step got zero, must be positive or negative.") {}
+    };
+
+    template<typename T>
+    struct is_rangeable : public std::integral_constant<bool, std::is_integral<T>::value> {
     };
 
     template<typename T, typename Enable=void>
@@ -181,6 +206,32 @@ namespace ohm {
         Iterator m_end_it;
     };
 
+    template<typename _Begin, typename _End, typename _Step>
+    typename std::enable_if<
+            is_rangeable<_Begin>::value && is_rangeable<_End>::value && is_rangeable<_Step>::value,
+            Range<typename serial_type<_Begin, _End, _Step>::type>>::type
+    inline range(_Begin begin, _End end, _Step step) {
+        using T = typename serial_type<_Begin, _End, _Step>::type;
+        return Range<T>(T(begin), T(end), T(step));
+    }
+
+    template<typename _Begin, typename _End>
+    typename std::enable_if<
+            is_rangeable<_Begin>::value && is_rangeable<_End>::value,
+            Range<typename serial_type<_Begin, _End>::type>>::type
+    inline range(_Begin begin, _End end) {
+        using T = typename serial_type<_Begin, _End>::type;
+        return Range<T>(T(begin), T(end));
+    }
+
+    template<typename _Begin>
+    typename std::enable_if<
+            is_rangeable<_Begin>::value,
+            Range<_Begin>>::type
+    inline range(_Begin begin) {
+        using T = _Begin;
+        return Range<T>(begin);
+    }
 
     inline std::vector<int32_t> ruler();
 
