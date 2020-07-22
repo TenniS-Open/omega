@@ -12,6 +12,7 @@
 
 #include "type_iterable.h"
 #include "type_callable.h"
+#include "type_cast.h"
 
 namespace ohm {
     template<typename T, typename Enable = void>
@@ -21,11 +22,6 @@ namespace ohm {
 
     template<typename...Args>
     struct is_printable : public std::false_type {};
-
-    template <typename T>
-    struct remove_cr {
-        using type = typename std::remove_reference<typename std::remove_const<T>::type>::type;
-    };
 
     template <typename T>
     struct __has_defined_function_operator_left_shift {

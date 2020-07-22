@@ -7,6 +7,7 @@
 
 #include "type_callable.h"
 #include "type_iterable.h"
+#include "type_narrow.h"
 
 #include "platform.h"
 #include <string>

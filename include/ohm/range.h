@@ -5,56 +5,13 @@
 #ifndef OMEGA_RANGE_H
 #define OMEGA_RANGE_H
 
-#include <type_traits>
 #include <cstdint>
 #include <vector>
 #include <iterator>
 
+#include "type_narrow.h"
+
 namespace ohm {
-    template<typename T, typename K, typename Enable=void>
-    struct up_type {
-        using type = void;
-    };
-
-    template<typename T, typename K>
-    struct up_type<T, K, typename std::enable_if<
-            std::is_arithmetic<T>::value && std::is_arithmetic<K>::value
-    >::type> {
-    public:
-        using type = decltype(std::declval<T>() + std::declval<K>());
-    };
-
-    template<typename T, typename K>
-    struct up_type<T, K, typename std::enable_if<
-            !(std::is_arithmetic<T>::value && std::is_arithmetic<K>::value) &&
-            std::is_convertible<K, T>::value
-    >::type> {
-    public:
-        using type = T;
-    };
-
-    template<typename T, typename K>
-    struct up_type<T, K, typename std::enable_if<
-            !(std::is_arithmetic<T>::value && std::is_arithmetic<K>::value) &&
-            !std::is_convertible<K, T>::value &&
-            std::is_convertible<T, K>::value
-    >::type> {
-    public:
-        using type = K;
-    };
-
-    template<typename T, typename... Args>
-    struct serial_type {
-    public:
-        using type = typename up_type<T, typename serial_type<Args...>::type>::type;
-    };
-
-    template<typename T>
-    struct serial_type<T> {
-    public:
-        using type = T;
-    };
-
     class RangeStepZeroException : public std::logic_error {
     public:
         using self = RangeStepZeroException;
@@ -209,18 +166,18 @@ namespace ohm {
     template<typename _Begin, typename _End, typename _Step>
     typename std::enable_if<
             is_rangeable<_Begin>::value && is_rangeable<_End>::value && is_rangeable<_Step>::value,
-            Range<typename serial_type<_Begin, _End, _Step>::type>>::type
+            Range<typename serial_narrow_type<_Begin, _End, _Step>::type>>::type
     inline range(_Begin begin, _End end, _Step step) {
-        using T = typename serial_type<_Begin, _End, _Step>::type;
+        using T = typename serial_narrow_type<_Begin, _End, _Step>::type;
         return Range<T>(T(begin), T(end), T(step));
     }
 
     template<typename _Begin, typename _End>
     typename std::enable_if<
             is_rangeable<_Begin>::value && is_rangeable<_End>::value,
-            Range<typename serial_type<_Begin, _End>::type>>::type
+            Range<typename serial_narrow_type<_Begin, _End>::type>>::type
     inline range(_Begin begin, _End end) {
-        using T = typename serial_type<_Begin, _End>::type;
+        using T = typename serial_narrow_type<_Begin, _End>::type;
         return Range<T>(T(begin), T(end));
     }
 
