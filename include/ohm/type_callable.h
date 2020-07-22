@@ -65,7 +65,7 @@ namespace ohm {
     template<typename T, typename RET, typename ...Args>
     struct is_implicit_callable_function<T, RET(Args...), typename std::enable_if<is_function_pointer<T>::value>::type>
             : std::integral_constant<bool,
-            is_implicit_callable_object<std::function<typename std::remove_pointer<T>::type>, RET(Args)...>::value> {};
+            is_implicit_callable_object<std::function<typename std::remove_pointer<T>::type>, RET(Args...)>::value> {};
 
     template<typename T, typename FUNC>
     struct is_callable
