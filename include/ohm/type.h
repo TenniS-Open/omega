@@ -19,7 +19,7 @@
 
 namespace ohm {
 #if OHM_PLATFORM_CC_GCC
-    static inline ::std::string classname_gcc(const ::std::string &name) {
+    static inline ::std::string demangle_gcc(const ::std::string &name) {
         size_t size = 0;
         int status = 0;
         char *demangled = abi::__cxa_demangle(name.c_str(), nullptr, &size, &status);
@@ -33,13 +33,13 @@ namespace ohm {
     }
 #endif
 
-    inline ::std::string classname(const ::std::string &name) {
+    inline ::std::string demangle(const ::std::string &name) {
 #if OHM_PLATFORM_CC_MSVC
         return name;
 #elif OHM_PLATFORM_CC_MINGW
         return name;
 #elif OHM_PLATFORM_CC_GCC
-        return classname_gcc(name);
+        return demangle_gcc(name);
 #else
         return name;
 #endif
@@ -47,7 +47,19 @@ namespace ohm {
 
     template <typename T>
     inline ::std::string classname() {
-        return classname(typeid(T).name());
+        static std::string void_blank = demangle(typeid(void()).name());
+        auto tmp = demangle(typeid(void(T)).name());
+        return tmp.substr(void_blank.size() - 1, tmp.size() - void_blank.size());
+    }
+
+    template <>
+    inline ::std::string classname<void>() {
+        return "void";
+    }
+
+    template <typename T>
+    inline ::std::string classname(const T &) {
+        return classname<T>();
     }
 }
 
