@@ -13,7 +13,7 @@
 #include <string>
 
 
-#if OHM_PLATFORM_CC_GCC
+#if OHM_PLATFORM_CC_GCC || OHM_PLATFORM_CC_MINGW
 #include <cxxabi.h>
 #endif
 
@@ -22,7 +22,7 @@
 #endif
 
 namespace ohm {
-#if OHM_PLATFORM_CC_GCC
+#if OHM_PLATFORM_CC_GCC || OHM_PLATFORM_CC_MINGW
     static inline ::std::string demangle_gcc(const ::std::string &name) {
         size_t size = 0;
         int status = 0;
@@ -55,9 +55,7 @@ namespace ohm {
     inline ::std::string demangle(const ::std::string &name) {
 #if OHM_PLATFORM_CC_MSVC
 		return demangle_msvc(name);
-#elif OHM_PLATFORM_CC_MINGW
-        return name;
-#elif OHM_PLATFORM_CC_GCC
+#elif OHM_PLATFORM_CC_GCC || OHM_PLATFORM_CC_MINGW
         return demangle_gcc(name);
 #else
         return name;
