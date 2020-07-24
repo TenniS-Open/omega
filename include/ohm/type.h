@@ -17,6 +17,10 @@
 #include <cxxabi.h>
 #endif
 
+#if OHM_PLATFORM_CC_MSVC
+#include <regex>
+#endif
+
 namespace ohm {
 #if OHM_PLATFORM_CC_GCC
     static inline ::std::string demangle_gcc(const ::std::string &name) {
@@ -33,9 +37,24 @@ namespace ohm {
     }
 #endif
 
+#if OHM_PLATFORM_CC_MSVC
+	static inline ::std::string demangle_msvc(const ::std::string &name) {
+		auto tmp = name;
+		// ignore give default type
+		static const std::regex regex_ignore(R"((?!\W|^)__cdecl(?=\W|$)|(?!\W|^)(class|struct|union|enum) )");
+		tmp = std::regex_replace(tmp, regex_ignore, "");
+		// ignore 64 given type
+#if OHM_PLATFORM_BITS_64
+		static const std::regex regex_replace_1(R"(([&\*]) __ptr64(?=[\W]|$))");
+		tmp = std::regex_replace(tmp, regex_replace_1, "$1");
+#endif
+		return tmp;
+	}
+#endif
+
     inline ::std::string demangle(const ::std::string &name) {
 #if OHM_PLATFORM_CC_MSVC
-        return name;
+		return demangle_msvc(name);
 #elif OHM_PLATFORM_CC_MINGW
         return name;
 #elif OHM_PLATFORM_CC_GCC
@@ -47,9 +66,9 @@ namespace ohm {
 
     template <typename T>
     inline ::std::string classname() {
-        static std::string void_blank = demangle(typeid(void()).name());
+        static const std::string void_blank = demangle(typeid(void(bool)).name());
         auto tmp = demangle(typeid(void(T)).name());
-        return tmp.substr(void_blank.size() - 1, tmp.size() - void_blank.size());
+        return tmp.substr(void_blank.size() - 5, tmp.size() + 4 - void_blank.size());
     }
 
     template <>
