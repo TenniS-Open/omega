@@ -5,6 +5,8 @@
 #ifndef OMEGA_LIST_H
 #define OMEGA_LIST_H
 
+#include <vector>
+
 #include "type_iterable.h"
 
 namespace ohm {

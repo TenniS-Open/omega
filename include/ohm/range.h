@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <vector>
 #include <iterator>
+#include <functional>
 
 #include "type_narrow.h"
 
