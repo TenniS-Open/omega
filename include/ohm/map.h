@@ -5,6 +5,8 @@
 #ifndef OMEGA_MAP_H
 #define OMEGA_MAP_H
 
+#include <iostream>
+
 #include "type_iterable.h"
 #include "list.h"
 #include "type.h"
@@ -35,8 +37,7 @@ namespace ohm {
                             typename std::iterator_traits<Iter>::value_type>::type>::value &&
                     std::is_convertible<typename
                     is_mapper_of<FUNC, typename remove_cr<
-                            typename std::iterator_traits<Iter>::value_type>::type>::return_type, T>::value &&
-                    std::is_default_constructible<T>::value>::type> {
+                            typename std::iterator_traits<Iter>::value_type>::type>::return_type, T>::value>::type> {
     public:
         using value_type = T;
         using iterator_value_type = typename remove_cr<
@@ -65,13 +66,13 @@ namespace ohm {
             }
 
             const T &operator*() const {
-                do_map();
-                return m_value;
+                do_map<T>();
+                return *m_value;
             }
 
             const T *operator->() const {
-                do_map();
-                return &m_value;
+                do_map<T>();
+                return &*m_value;
             }
 
             bool operator!=(const Iterator &other) { return this->m_raw != other.m_raw; }
@@ -81,12 +82,35 @@ namespace ohm {
         private:
             FUNC m_mapper;
             Iter m_raw;
-            mutable T m_value;
+            mutable std::shared_ptr<T> m_value;
             mutable bool m_mapped = false;
 
-            void do_map() const {
+            template <typename S>
+            void do_map(typename std::enable_if<std::is_copy_assignable<S>::value, bool>::type = true) const {
                 if (m_mapped) return;
-                m_value = T(m_mapper(*m_raw));
+                if (m_value) {
+                    *m_value = T(m_mapper(*m_raw));
+                } else {
+                    m_value = std::make_shared<T>(m_mapper(*m_raw));
+                }
+                m_mapped = true;
+            }
+
+            template <typename S>
+            void do_map(typename std::enable_if<!std::is_copy_assignable<S>::value, bool>::type = true) const {
+                if (m_mapped) return;
+                if (m_value) {
+                    // 显式调用析构和构造，两步之间不能够异常打断
+                    try {
+                        m_value->~T();
+                        new(m_value.get())T(m_mapper(*m_raw));
+                    } catch (...) {
+                        std::cerr << "[FATAL] Got unexpected Error, please use mapped instead map!" << std::endl;
+                        exit(11);
+                    }
+                } else {
+                    m_value = std::make_shared<T>(m_mapper(*m_raw));
+                }
                 m_mapped = true;
             }
         };
@@ -153,9 +177,9 @@ namespace ohm {
             is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::value &&
             std::is_convertible<typename
             is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::return_type, T>::value,
-            MappingRange<T, FUNC, typename has_begin<const Iter>::type>>::type
+            MappingRange<T, FUNC, typename remove_cr<typename has_begin<const Iter>::type>::type>>::type
     map_to(FUNC func, const Iter &iter) {
-        using Mapped = MappingRange<T, FUNC, typename has_begin<const Iter>::type>;
+        using Mapped = MappingRange<T, FUNC, typename remove_cr<typename has_begin<const Iter>::type>::type>;
         return Mapped(func, iter.begin(), iter.end());
     }
 
@@ -164,7 +188,7 @@ namespace ohm {
             is_iterable<Iter>::value &&
             is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::value,
             MappingRange<typename is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::return_type,
-            FUNC, typename has_begin<const Iter>::type>>::type
+            FUNC, typename remove_cr<typename has_begin<const Iter>::type>::type>>::type
     map(FUNC func, const Iter &iter) {
         using T = typename is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::return_type;
         return map_to<T>(func, iter);
