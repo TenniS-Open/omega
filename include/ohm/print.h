@@ -208,6 +208,42 @@ namespace ohm {
             out << ")";
         }
     };
+
+    template <typename... Args>
+    struct printable<std::tuple<Args...>, typename std::enable_if<
+            is_printable<Args...>::value>::type> {
+        using type = std::tuple<Args...>;
+        void print(std::ostream &out, const type &x) {
+            _print<std::tuple_size<type>::value>(out, x);
+        }
+    private:
+        template <size_t N>
+        void _print(typename std::enable_if<0 == N, std::ostream &>::type out,
+                    const type&) {
+            out << "()";
+        }
+
+        template <size_t N>
+        void _print(typename std::enable_if<0 < N, std::ostream &>::type out,
+                    const type &x) {
+            out << "(";
+            _print_at<N, 0>(out, x);
+            out << ")";
+        }
+
+        template <size_t N, size_t I>
+        void _print_at(typename std::enable_if<I == N - 1, std::ostream &>::type out,
+                       const type &x) {
+            stream_print(out, std::get<I>(x));
+        }
+
+        template <size_t N, size_t I>
+        void _print_at(typename std::enable_if<I < N - 1, std::ostream &>::type out,
+                    const type &x) {
+            stream_print(out, std::get<I>(x), ", ");
+            _print_at<N, I + 1>(out, x);
+        }
+    };
 }
 
 #endif //OMEGA_PRINT_H
