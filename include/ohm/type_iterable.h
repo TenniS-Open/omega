@@ -91,9 +91,9 @@ namespace ohm {
     template<typename T, typename Enable = void>
     struct has_iterator {
     public:
-        using forward_value_type = void;
-        using value_type = void;
-        static constexpr bool value = false;
+//        using forward_value_type = void;
+//        using value_type = void;
+//        static constexpr bool value = false;
     };
 
     template<typename T>
