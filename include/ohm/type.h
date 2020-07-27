@@ -15,6 +15,7 @@
 
 #if OHM_PLATFORM_CC_GCC || OHM_PLATFORM_CC_MINGW
 #include <cxxabi.h>
+#include <memory>
 #endif
 
 #if OHM_PLATFORM_CC_MSVC
@@ -26,11 +27,11 @@ namespace ohm {
     static inline ::std::string demangle_gcc(const ::std::string &name) {
         size_t size = 0;
         int status = 0;
-        char *demangled = abi::__cxa_demangle(name.c_str(), nullptr, &size, &status);
-        if (demangled != nullptr) {
-            ::std::string parsed = demangled;
-            ::std::free(demangled);
-            return parsed;
+        std::shared_ptr<char> parsed(
+                abi::__cxa_demangle(name.c_str(), nullptr, &size, &status),
+                std::free);
+        if (parsed.get()) {
+            return std::string(parsed.get());
         } else {
             return name;
         }
