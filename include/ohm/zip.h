@@ -169,12 +169,18 @@ namespace ohm {
     }
 
 #pragma push_macro("TUPLE_START_VALUE")
+#pragma push_macro("TUPLE_FORWARD_START_VALUE")
 #pragma push_macro("G")
 #define TUPLE_START_VALUE(N) \
     template<typename T> \
     inline typename std::enable_if<std::tuple_size<T>::value == N, \
             typename __tuple_star_value_type<T>::type>::type \
-    __tuple_start_value(T &a)
+    __tuple_star_value(T &a)
+#define TUPLE_FORWARD_START_VALUE(N) \
+    template<typename T> \
+    inline typename std::enable_if<std::tuple_size<T>::value == N, \
+            typename __tuple_forward_star_value_type<T>::type>::type \
+    __tuple_forward_star_value(T &a)
 #define G(N) *std::get<N>(a)
 
     TUPLE_START_VALUE(1) {
@@ -222,10 +228,120 @@ namespace ohm {
                                G(5), G(6), G(7), G(8), G(9));
     }
 
+    TUPLE_FORWARD_START_VALUE(1) {
+        return std::forward_as_tuple(G(0));
+    }
+
+    TUPLE_FORWARD_START_VALUE(2) {
+        return std::forward_as_tuple(G(0), G(1));
+    }
+
+    TUPLE_FORWARD_START_VALUE(3) {
+        return std::forward_as_tuple(G(0), G(1), G(2));
+    }
+
+    TUPLE_FORWARD_START_VALUE(4) {
+        return std::forward_as_tuple(G(0), G(1), G(2), G(3));
+    }
+
+    TUPLE_FORWARD_START_VALUE(5) {
+        return std::forward_as_tuple(G(0), G(1), G(2), G(3), G(4));
+    }
+
+    TUPLE_FORWARD_START_VALUE(6) {
+        return std::forward_as_tuple(G(0), G(1), G(2), G(3), G(4),
+                                     G(5));
+    }
+
+    TUPLE_FORWARD_START_VALUE(7) {
+        return std::forward_as_tuple(G(0), G(1), G(2), G(3), G(4),
+                                     G(5), G(6));
+    }
+
+    TUPLE_FORWARD_START_VALUE(8) {
+        return std::forward_as_tuple(G(0), G(1), G(2), G(3), G(4),
+                                     G(5), G(6), G(7));
+    }
+
+    TUPLE_FORWARD_START_VALUE(9) {
+        return std::forward_as_tuple(G(0), G(1), G(2), G(3), G(4),
+                                     G(5), G(6), G(7), G(8));
+    }
+
+    TUPLE_FORWARD_START_VALUE(10) {
+        return std::forward_as_tuple(G(0), G(1), G(2), G(3), G(4),
+                                     G(5), G(6), G(7), G(8), G(9));
+    }
+
 #undef TUPLE_START_VALUE
 #undef G
+#pragma pop_macro("TUPLE_FORWARD_START_VALUE")
 #pragma pop_macro("TUPLE_START_VALUE")
 #pragma pop_macro("G")
+
+
+    template<typename Iter>
+    class ZippingRange;
+
+    /**
+     *
+     * @tparam Args tuple of iterators
+     */
+    template<typename... Args>
+    class ZippingRange<std::tuple<Args...>> {
+    public:
+        using Iter = std::tuple<Args...>;
+        using value_type = typename __tuple_forward_star_value_type<Iter>::type;
+        using iterator_value_type = typename __tuple_star_value_type<Iter>::type;
+        using iterator_difference_type = size_t;
+        using iterator_pointer = typename std::add_const<typename std::add_pointer<value_type>::type>::type;
+        using iterator_reference = value_type;
+
+        ZippingRange(Iter begin, Iter end)
+                : m_begin_it(begin), m_end_it(end) {}
+
+        class Iterator : public std::iterator<std::input_iterator_tag,
+                iterator_value_type, iterator_difference_type,
+                iterator_pointer, iterator_reference> {
+        public:
+            Iterator(Iter raw)
+                    : m_raw(raw) {}
+
+            const Iterator operator++(int) {
+                auto tmp = *this;
+                m_raw = __tuple_iterator_forward(m_raw);
+                return tmp;
+            }
+
+            Iterator &operator++() {
+                m_raw = __tuple_iterator_forward(m_raw);
+                return *this;
+            }
+
+            iterator_reference operator*() const {
+                return __tuple_forward_star_value(const_cast<Iter &>(m_raw));
+            }
+
+            iterator_pointer operator->() const {
+                return nullptr;
+            }
+
+            bool operator!=(const Iterator &other) { return __tuple_iterator_not_equal(this->m_raw, other.m_raw); }
+
+            bool operator==(const Iterator &other) { return !operator!=(other); }
+
+        private:
+            Iter m_raw;
+        };
+
+        const Iterator begin() const { return m_begin_it; }
+
+        const Iterator end() const { return m_end_it; }
+
+    private:
+        Iterator m_begin_it;
+        Iterator m_end_it;
+    };
 
     template<typename... Args>
     inline typename std::enable_if<
@@ -239,11 +355,24 @@ namespace ohm {
 
         auto it = beg;
         while (__tuple_iterator_not_equal(it, end)) {
-            result.emplace_back(__tuple_start_value(it));
+            result.emplace_back(__tuple_star_value(it));
             it = __tuple_iterator_forward(it);
         }
 
         return result;
+    }
+
+    template<typename... Args>
+    inline typename std::enable_if<
+            __is_all_iterable<Args...>::value,
+            ZippingRange<typename __zip_range_iterator_type<void, Args...>::type>>::type
+    zip(Args &&...args) {
+        auto beg = __zip_range_begin_iterator(std::forward<Args>(args)...);
+        auto end = __zip_range_end_iterator(std::forward<Args>(args)...);
+
+        using Zipped = ZippingRange<typename __zip_range_iterator_type<void, Args...>::type>;
+
+        return Zipped(beg, end);
     }
 }
 

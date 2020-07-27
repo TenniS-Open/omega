@@ -19,9 +19,18 @@ int main() {
 
     std::map<float, std::string> c = {{1, "1"}, {2, "2"}};
 
+    println(classname<decltype(zip(a, b, c))::value_type>());
+    println(classname<decltype(zipped(a, b, c))::value_type>());
+
+    for (auto i : zip(a, b, c)) {
+        println(i);
+        std::get<1>(i) = "c";
+    }
+
     for (auto i : zipped(a, b, c)) {
         println(i);
     }
+
 
     println();
 }

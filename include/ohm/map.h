@@ -84,7 +84,7 @@ namespace ohm {
                 return nullptr;
             }
 
-            const T *operator->() const {
+            iterator_pointer operator->() const {
                 return get_pointer<T>();
             }
 
