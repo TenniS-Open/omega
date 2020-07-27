@@ -58,7 +58,7 @@ namespace ohm {
 
             const Iterator operator++(int) {
                 auto tmp = *this;
-                m_raw++;
+                ++m_raw;
                 return tmp;
             }
 
@@ -86,6 +86,71 @@ namespace ohm {
 
             iterator_pointer operator->() const {
                 return get_pointer<T>();
+            }
+
+            bool operator!=(const Iterator &other) { return this->m_raw != other.m_raw; }
+
+            bool operator==(const Iterator &other) { return !operator!=(other); }
+
+        private:
+            FUNC m_mapper;
+            Iter m_raw;
+        };
+
+        const Iterator begin() const { return m_begin_it; }
+
+        const Iterator end() const { return m_end_it; }
+
+    private:
+        Iterator m_begin_it;
+        Iterator m_end_it;
+    };
+
+    template<typename T, typename FUNC, typename Iter, typename Enable = void>
+    class MappingRangeTo;
+
+    template<typename T, typename FUNC, typename Iter>
+    class MappingRangeTo<T, FUNC, Iter,
+            typename std::enable_if<
+                    has_iterator_tag<Iter, std::input_iterator_tag>::value &&
+                    is_mapper_of<FUNC, typename std::iterator_traits<Iter>::value_type>::value &&
+                    std::is_convertible<typename is_mapper_of<
+                            FUNC, typename std::iterator_traits<Iter>::value_type>::forward_return_type, T>::value
+                    >::type> {
+    public:
+        using value_type = T;
+        using iterator_value_type = T;
+        using iterator_difference_type = typename std::iterator_traits<Iter>::difference_type;
+        using iterator_pointer = const T *;
+        using iterator_reference = T;
+
+        MappingRangeTo(FUNC func, Iter begin, Iter end)
+                : m_begin_it(func, begin), m_end_it(func, end) {}
+
+        class Iterator : public std::iterator<std::input_iterator_tag,
+                iterator_value_type, iterator_difference_type,
+                iterator_pointer, iterator_reference> {
+        public:
+            Iterator(FUNC mapper, Iter raw)
+                    : m_mapper(mapper), m_raw(raw) {}
+
+            const Iterator operator++(int) {
+                auto tmp = *this;
+                ++m_raw;
+                return tmp;
+            }
+
+            Iterator &operator++() {
+                ++m_raw;
+                return *this;
+            }
+
+            iterator_reference operator*() const {
+                return T(m_mapper(*const_cast<Iter&>(m_raw)));
+            }
+
+            iterator_pointer operator->() const {
+                return nullptr;
             }
 
             bool operator!=(const Iterator &other) { return this->m_raw != other.m_raw; }
@@ -157,12 +222,28 @@ namespace ohm {
     inline typename std::enable_if<
             is_iterable<Iter>::value &&
             is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::value &&
+            !std::is_same<T, typename has_iterator<Iter>::value_type>::value &&
             std::is_convertible<typename
             is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::forward_return_type, T>::value,
-            MappingRange<T, FUNC, typename remove_cr<typename has_begin<const Iter>::type>::type>>::type
+            MappingRangeTo<T, FUNC, typename has_begin<const Iter>::type>>::type
     map_to(FUNC func, const Iter &iter) {
-        using Mapped = MappingRange<T, FUNC, typename remove_cr<typename has_begin<const Iter>::type>::type>;
-        return Mapped(func, iter.begin(), iter.end());
+        auto beg = iter.begin();
+        auto end = iter.end();
+        using Mapped = MappingRangeTo<T, FUNC, decltype(beg)>;
+        return Mapped(func, beg, end);
+    }
+
+    template<typename T, typename FUNC, typename Iter>
+    inline typename std::enable_if<
+            is_iterable<Iter>::value &&
+            is_mapper_of<FUNC, typename has_iterator<Iter>::value_type>::value &&
+            std::is_same<T, typename has_iterator<Iter>::value_type>::value,
+            MappingRange<FUNC, typename has_begin<const Iter>::type>>::type
+    map_to(FUNC func, const Iter &iter) {
+        auto beg = iter.begin();
+        auto end = iter.end();
+        using Mapped = MappingRange<FUNC, decltype(beg)>;
+        return Mapped(func, beg, end);
     }
 
     template<typename FUNC, typename Iter>
