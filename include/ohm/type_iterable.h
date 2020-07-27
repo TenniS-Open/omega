@@ -25,8 +25,9 @@ namespace ohm {
         static auto Type(...) -> void;
 
     public:
+        using forward_type = decltype(Type<T>(0));
+        using type = typename remove_cr<forward_type>::type;
         static constexpr bool value = std::is_same<decltype(Check<T>(0)), std::true_type>::value;
-        using type = decltype(Type<T>(0));
     };
 
     template<typename T>
@@ -45,8 +46,9 @@ namespace ohm {
         static auto Type(...) -> void;
 
     public:
+        using forward_type = decltype(Type<T>(0));
+        using type = typename remove_cr<forward_type>::type;
         static constexpr bool value = std::is_same<decltype(Check<T>(0)), std::true_type>::value;
-        using type = decltype(Type<T>(0));
     };
 
     template<class _Tp>
@@ -89,6 +91,7 @@ namespace ohm {
     template<typename T, typename Enable = void>
     struct has_iterator {
     public:
+        using forward_value_type = void;
         using value_type = void;
         static constexpr bool value = false;
     };
@@ -97,8 +100,8 @@ namespace ohm {
     struct has_iterator<T, typename std::enable_if<is_iterable<T>::value>::type> {
     public:
         static constexpr bool value = true;
-        using value_type = typename remove_cr<
-                typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>::type;
+        using forward_value_type = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type;
+        using value_type = typename remove_cr<forward_value_type>::type;
     };
 }
 
