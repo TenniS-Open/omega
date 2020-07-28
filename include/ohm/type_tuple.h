@@ -5,6 +5,8 @@
 #ifndef OMEGA_TYPE_TUPLE_H
 #define OMEGA_TYPE_TUPLE_H
 
+#include "type_variable.h"
+
 #include <tuple>
 #include <type_traits>
 #include <limits>
@@ -12,14 +14,6 @@
 namespace ohm {
     template<typename T, size_t _Start, size_t _End = std::numeric_limits<size_t>::max(), typename Enable = void>
     struct sub_tuple;
-
-    inline constexpr bool __GT(size_t a, size_t b) { return a > b; }
-
-    inline constexpr bool __LT(size_t a, size_t b) { return a < b; }
-
-    inline constexpr bool __GE(size_t a, size_t b) { return a >= b; }
-
-    inline constexpr bool __LE(size_t a, size_t b) { return a <= b; }
 
     template<size_t _Start, size_t _End, typename... Args>
     struct sub_tuple<std::tuple<Args...>, _Start, _End,

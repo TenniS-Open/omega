@@ -103,6 +103,20 @@ namespace ohm {
         using forward_value_type = decltype(*std::declval<T>().begin());
         using value_type = typename remove_cr<forward_value_type>::type;
     };
+
+
+    template<typename... Args>
+    struct is_all_iterable : public std::false_type {
+    };
+
+    template<typename T>
+    struct is_all_iterable<T> : public std::integral_constant<bool, is_iterable<T>::value> {
+    };
+
+    template<typename T, typename... Args>
+    struct is_all_iterable<T, Args...>
+            : public std::integral_constant<bool, is_iterable<T>::value && is_all_iterable<Args...>::value> {
+    };
 }
 
 #endif //OMEGA_TYPE_ITERABLE_H
