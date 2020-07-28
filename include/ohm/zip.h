@@ -18,20 +18,20 @@
 
 namespace ohm {
     template<size_t N, typename... Args>
-    inline void __tuple_iterator_forward_at(
+    inline void __zip_tuple_iterator_forward_at(
             typename std::enable_if<N == std::tuple_size<std::tuple<Args...>>::value, std::tuple<Args...>>::type &it) {}
 
     template<size_t N, typename... Args>
-    inline void __tuple_iterator_forward_at(
+    inline void __zip_tuple_iterator_forward_at(
             typename std::enable_if<N < std::tuple_size<std::tuple<Args...>>::value, std::tuple<Args...>>::type &it) {
         ++std::get<N>(it);
-        __tuple_iterator_forward_at<N + 1, Args...>(it);
+        __zip_tuple_iterator_forward_at<N + 1, Args...>(it);
     }
 
     template<typename... Args>
-    inline std::tuple<Args...> __tuple_iterator_forward(const std::tuple<Args...> &it) {
+    inline std::tuple<Args...> __zip_tuple_iterator_forward(const std::tuple<Args...> &it) {
         auto next = it;
-        __tuple_iterator_forward_at<0, Args...>(next);
+        __zip_tuple_iterator_forward_at<0, Args...>(next);
         return next;
     }
 
@@ -64,12 +64,12 @@ namespace ohm {
 
             const Iterator operator++(int) {
                 auto tmp = *this;
-                m_raw = __tuple_iterator_forward(m_raw);
+                m_raw = __zip_tuple_iterator_forward(m_raw);
                 return tmp;
             }
 
             Iterator &operator++() {
-                m_raw = __tuple_iterator_forward(m_raw);
+                m_raw = __zip_tuple_iterator_forward(m_raw);
                 return *this;
             }
 
@@ -111,7 +111,7 @@ namespace ohm {
         auto it = beg;
         while (__tuple_it_not_equal(it, end)) {
             result.emplace_back(__tuple_it_star(it));
-            it = __tuple_iterator_forward(it);
+            it = __zip_tuple_iterator_forward(it);
         }
 
         return result;
