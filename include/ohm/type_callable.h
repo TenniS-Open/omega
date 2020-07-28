@@ -19,6 +19,7 @@ namespace ohm {
     public:
         static constexpr bool value = std::is_same<decltype(Check<T>(0)), std::true_type>::value;
     };
+
     template<typename T, typename FUNC, typename Enable = void>
     struct is_implicit_callable_object : std::false_type {};
 
@@ -43,8 +44,6 @@ namespace ohm {
     public:
         static constexpr bool value = std::is_same<decltype(Check<T>(0)), std::true_type>::value;
     };
-
-
 
     template<typename T, typename FUNC, typename Enable = void>
     struct is_callable_function : std::false_type {};

@@ -10,7 +10,7 @@
 namespace ohm {
     template <typename T>
     struct remove_cr {
-        using type = typename std::remove_reference<typename std::remove_const<T>::type>::type;
+        using type = typename std::remove_const<typename std::remove_reference<T>::type>::type;
     };
 }
 

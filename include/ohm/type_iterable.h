@@ -100,7 +100,7 @@ namespace ohm {
     struct has_iterator<T, typename std::enable_if<is_iterable<T>::value>::type> {
     public:
         static constexpr bool value = true;
-        using forward_value_type = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type;
+        using forward_value_type = decltype(*std::declval<T>().begin());
         using value_type = typename remove_cr<forward_value_type>::type;
     };
 }
