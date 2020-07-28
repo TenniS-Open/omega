@@ -46,8 +46,8 @@ namespace ohm {
     class ZippingRange<std::tuple<Args...>> {
     public:
         using Iter = std::tuple<Args...>;
-        using value_type = typename tuple_it_forward_star_type<Iter>::type;
-        using iterator_value_type = typename tuple_it_star_type<Iter>::type;
+        using value_type = typename __tuple_it_forward_star_type<Iter>::type;
+        using iterator_value_type = typename __tuple_it_star_type<Iter>::type;
         using iterator_difference_type = size_t;
         using iterator_pointer = typename std::add_const<typename std::add_pointer<value_type>::type>::type;
         using iterator_reference = value_type;
@@ -74,14 +74,14 @@ namespace ohm {
             }
 
             iterator_reference operator*() const {
-                return tuple_it_forward_star(const_cast<Iter &>(m_raw));
+                return __tuple_it_forward_star(const_cast<Iter &>(m_raw));
             }
 
             iterator_pointer operator->() const {
                 return nullptr;
             }
 
-            bool operator!=(const Iterator &other) { return tuple_it_not_equal(this->m_raw, other.m_raw); }
+            bool operator!=(const Iterator &other) { return __tuple_it_not_equal(this->m_raw, other.m_raw); }
 
             bool operator==(const Iterator &other) { return !operator!=(other); }
 
@@ -101,16 +101,16 @@ namespace ohm {
     template<typename... Args>
     inline typename std::enable_if<
             is_all_iterable<Args...>::value && __GT(variable_count<Args...>::value, 0),
-            List<typename tuple_it_iterable_value_type<Args...>::type>>::type
+            List<typename __tuple_it_iterable_value_type<Args...>::type>>::type
     zipped(Args &&...args) {
-        auto beg = tuple_it_from_iterable_begin(std::forward<Args>(args)...);
-        auto end = tuple_it_from_iterable_end(std::forward<Args>(args)...);
+        auto beg = __tuple_it_from_iterable_begin(std::forward<Args>(args)...);
+        auto end = __tuple_it_from_iterable_end(std::forward<Args>(args)...);
 
-        List<typename tuple_it_iterable_value_type<Args...>::type> result;
+        List<typename __tuple_it_iterable_value_type<Args...>::type> result;
 
         auto it = beg;
-        while (tuple_it_not_equal(it, end)) {
-            result.emplace_back(tuple_it_star(it));
+        while (__tuple_it_not_equal(it, end)) {
+            result.emplace_back(__tuple_it_star(it));
             it = __tuple_iterator_forward(it);
         }
 
@@ -120,12 +120,12 @@ namespace ohm {
     template<typename... Args>
     inline typename std::enable_if<
             is_all_iterable<Args...>::value && __GT(variable_count<Args...>::value, 0),
-            ZippingRange<typename tuple_it_from_iterable_type<Args...>::type>>::type
+            ZippingRange<typename __tuple_it_from_iterable_type<Args...>::type>>::type
     zip(Args &&...args) {
-        auto beg = tuple_it_from_iterable_begin(std::forward<Args>(args)...);
-        auto end = tuple_it_from_iterable_end(std::forward<Args>(args)...);
+        auto beg = __tuple_it_from_iterable_begin(std::forward<Args>(args)...);
+        auto end = __tuple_it_from_iterable_end(std::forward<Args>(args)...);
 
-        using Zipped = ZippingRange<typename tuple_it_from_iterable_type<Args...>::type>;
+        using Zipped = ZippingRange<typename __tuple_it_from_iterable_type<Args...>::type>;
 
         return Zipped(beg, end);
     }

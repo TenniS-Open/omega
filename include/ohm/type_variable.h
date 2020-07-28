@@ -14,6 +14,10 @@ namespace ohm {
 
     inline constexpr bool __LE(size_t a, size_t b) { return a <= b; }
 
+    inline constexpr bool __EQ(size_t a, size_t b) { return a == b; }
+
+    inline constexpr bool __NE(size_t a, size_t b) { return a != b; }
+
     template <typename... Args>
     struct variable_count;
 
