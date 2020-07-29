@@ -5,6 +5,8 @@
 #ifndef OMEGA_TYPE_VARIABLE_H
 #define OMEGA_TYPE_VARIABLE_H
 
+#include <cstddef>
+
 namespace ohm {
     inline constexpr bool __GT(size_t a, size_t b) { return a > b; }
 
