@@ -18,7 +18,7 @@ int main() {
 
     std::vector<std::string> b = {"a", "b", "c"};
 
-    std::map<float, std::string> c = {{1, "1"}, {2, "2"}};
+    std::map<float, std::string> c = {{1.f, "1"}, {2.f, "2"}};
 
     println(classname<decltype(grid(a, b, c))::value_type>());
     println(classname<decltype(grided(a, b, c))::value_type>());

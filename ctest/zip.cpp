@@ -17,7 +17,7 @@ int main() {
 
     std::vector<std::string> b = {"a", "b", "c"};
 
-    std::map<float, std::string> c = {{1, "1"}, {2, "2"}};
+    std::map<float, std::string> c = {{1.f, "1"}, {2.f, "2"}};
 
     println(classname<decltype(zip(a, b, c))::value_type>());
     println(classname<decltype(zipped(a, b, c))::value_type>());
