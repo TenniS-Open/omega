@@ -201,52 +201,38 @@ namespace ohm {
 
     template<typename... Args>
     inline typename std::enable_if<is_printable<Args...>::value, std::string>::type
-    sprint(const Args &...args) {
+    sprint(const Args &..._) {
         std::ostringstream oss;
-        stream_print(oss, args...);
+        stream_print(oss, _...);
         return oss.str();
     }
 
     template<typename... Args>
-    inline void print(const Args &...args) {
-        std::cout << sprint(args...);
+    inline void print(const Args &..._) {
+        std::cout << sprint(_...);
     }
 
     template<typename... Args>
-    inline std::string sprintln(const Args &...args) {
-        return sprint(args..., "\n");
+    inline std::string sprintln(const Args &..._) {
+        return sprint(_..., "\n");
     }
 
     template<typename... Args>
-    inline void println(const Args &...args) {
-        std::cout << sprint(args..., "\n");
+    inline void println(const Args &..._) {
+        std::cout << sprint(_..., "\n");
         std::cout.flush();
     }
 
     template<typename... Args>
-    inline void print(std::ostream &stream, const Args &...args) {
-        stream_print(stream, args...);
+    inline void print(std::ostream &stream, const Args &..._) {
+        stream_print(stream, _...);
     }
 
     template<typename... Args>
-    inline void println(std::ostream &stream, const Args &...args) {
-        stream_print(stream, args..., "\n");
+    inline void println(std::ostream &stream, const Args &..._) {
+        stream_print(stream, _..., "\n");
         stream.flush();
     }
-
-    template<typename T>
-    struct add_star {
-    private:
-        template<typename U>
-        static auto Type(int) -> decltype(*std::declval<U>());
-
-        template<typename U>
-        static auto Type(...) -> U;
-
-    public:
-        using type = decltype(Type<T>(0));
-    };
-
 
     template<typename T>
     struct printable<T, typename std::enable_if<
@@ -339,7 +325,7 @@ namespace ohm {
         void print(std::ostream &out, const type &x) {}
     };
 
-    template <>
+    template<>
     struct printable<std::ostream &(std::ostream &)> {
         using type = std::ostream &(std::ostream &);
 
