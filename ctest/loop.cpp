@@ -13,6 +13,19 @@
 #include <string>
 #include <map>
 
+class F {
+public:
+    F(int a): a(a) {}
+    F(const F &) = delete;
+    F(F &&other) { a = other.a; }
+    int a;
+};
+
+std::ostream &operator<<(std::ostream &out, const F &f)
+{
+    return out << f.a;
+}
+
 int main() {
     using namespace ohm;
     auto a = range(4);
@@ -23,21 +36,24 @@ int main() {
     auto c = loop(y);
     auto d = loop(3);
     auto e = loop("4");
+    auto f = loop(F(5));
 
     println(classname<decltype(a)>());
     println(classname<decltype(b)>());
     println(classname<decltype(c)>());
     println(classname<decltype(d)>());
     println(classname<decltype(e)>());
+    println(classname<decltype(f)>());
 
-    println(classname<decltype(zip(a, b, c, d, e))::value_type>());
-    println(classname<decltype(zipped(a, b, c, d, e))::value_type>());
+    println(classname<decltype(zip(a, b, c, d, e, f))::value_type>());
+    println(classname<decltype(zipped(a, b, c, d, e, f))::value_type>());
 
-    for (auto i : zip(a, b, c, d, e)) {
+    for (auto i : zip(a, b, c, d, e, f)) {
         println(i);
     }
 
-    for (auto i : zipped(a, b, c, d, e)) {
+    // must failed on zipped(a, b, c, d, e, f), because it not copyable
+    for (auto &i : zipped(a, b, c, d, e)) {
         println(i);
     }
 
