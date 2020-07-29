@@ -143,7 +143,8 @@ namespace ohm {
 
     template<typename... Args>
     inline void println(const Args &...args) {
-        print(args..., "\n");
+        std::cout << sprint(args..., "\n");
+        std::cout.flush();
     }
 
     template<typename... Args>
@@ -154,6 +155,7 @@ namespace ohm {
     template<typename... Args>
     inline void println(std::ostream &stream, const Args &...args) {
         stream_print(stream, args..., "\n");
+        stream.flush();
     }
 
     template<typename T>
