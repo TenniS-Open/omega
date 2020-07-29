@@ -9,59 +9,20 @@
 #include "type_variable.h"
 
 namespace ohm {
-    template<typename Enable = void, typename...Args>
-    struct __hidden_tuple_it_iterable_value_type;
-
-    template<typename Enable = void, typename...Args>
-    struct __hidden_tuple_it_iterable_forward_value_type;
-
-    template<typename _Rg>
-    inline auto __hidden_tuple_it_iterable_value_extract() -> typename has_iterator<_Rg>::value_type;
-
-    template<typename _Rg>
-    inline auto __hidden_tuple_it_iterable_forward_value_extract() -> typename has_iterator<_Rg>::forward_value_type;
-
-    template<typename...Args>
-    struct __hidden_tuple_it_iterable_value_type<typename std::enable_if<is_all_iterable<Args...>::value>::type, Args...> {
-        using type = decltype(std::make_tuple(__hidden_tuple_it_iterable_value_extract<Args>()...));
-    };
-
-    template<typename...Args>
-    struct __hidden_tuple_it_iterable_forward_value_type<typename std::enable_if<is_all_iterable<Args...>::value>::type, Args...> {
-        using type = decltype(std::forward_as_tuple(__hidden_tuple_it_iterable_forward_value_extract<Args>()...));
-    };
-
-    template<typename... Args>
-    struct __tuple_it_iterable_value_type {
-        using type = typename __hidden_tuple_it_iterable_value_type<void, Args...>::type;
-    };
-
-    template<typename... Args>
-    struct __tuple_it_iterable_forward_value_type {
-        using type = typename __hidden_tuple_it_iterable_forward_value_type<void, Args...>::type;
-    };
-
-    /**
-     *
-     * TODO: not use above method
-     * @tparam _It
-     * @return
-     */
-
     template<typename _Rg>
     inline auto __hidden_get_iterable_begin() -> typename has_begin<_Rg>::type;
 
     template<typename Enable = void, typename...Args>
-    struct __hidden_tuple_it_form_iterable_type;
+    struct __hidden_tuple_it_from_iterable_type;
 
     template<typename...Args>
-    struct __hidden_tuple_it_form_iterable_type<typename std::enable_if<is_all_iterable<Args...>::value>::type, Args...> {
+    struct __hidden_tuple_it_from_iterable_type<typename std::enable_if<is_all_iterable<Args...>::value>::type, Args...> {
         using type = decltype(std::make_tuple(__hidden_get_iterable_begin<Args>()...));
     };
 
     template<typename... Args>
     struct __tuple_it_from_iterable_type {
-        using type = typename __hidden_tuple_it_form_iterable_type<void, Args...>::type;
+        using type = typename __hidden_tuple_it_from_iterable_type<void, Args...>::type;
     };
 
     template<typename T>
@@ -100,43 +61,55 @@ namespace ohm {
         return std::tuple_cat(std::make_tuple(t.end()), __tuple_it_from_iterable_end(std::forward<Args>(args)...));
     }
 
-    template<typename _It>
-    inline auto __hidden_tuple_it_forward_star_value() -> decltype(*std::declval<_It>());
+    // template<typename _It>
+    // inline auto __hidden_tuple_it_forward_star_value() -> decltype(*std::declval<_It>());
 
     template<typename T>
     struct __tuple_it_forward_star_type;
 
     template<typename T>
     struct __tuple_it_forward_star_type<std::tuple<T>> {
-        using type = decltype(std::forward_as_tuple(__hidden_tuple_it_forward_star_value<T>()));
+        using type = std::tuple<decltype(*std::declval<T>())>;
     };
 
     template<typename T, typename...Args>
     struct __tuple_it_forward_star_type<std::tuple<T, Args...>> {
         using type = decltype(std::tuple_cat(
-                std::forward_as_tuple(__hidden_tuple_it_forward_star_value<T>()),
+                std::declval<typename __tuple_it_forward_star_type<std::tuple<T>>::type>(),
                 std::declval<typename __tuple_it_forward_star_type<std::tuple<Args...>>::type>()
         ));
     };
 
-    template<typename _It>
-    inline auto __hidden_tuple_it_star_value() -> typename remove_cr<decltype(*std::declval<_It>())>::type;
+    // template<typename _It>
+    // inline auto __hidden_tuple_it_star_value() -> typename remove_cr<decltype(*std::declval<_It>())>::type;
 
     template<typename T>
     struct __tuple_it_star_type;
 
     template<typename T>
     struct __tuple_it_star_type<std::tuple<T>> {
-        using type = decltype(std::make_tuple(__hidden_tuple_it_star_value<T>()));
+        using type = decltype(std::make_tuple(*std::declval<T>()));
     };
 
     template<typename T, typename...Args>
     struct __tuple_it_star_type<std::tuple<T, Args...>> {
         using type = decltype(std::tuple_cat(
-                std::make_tuple(__hidden_tuple_it_star_value<T>()),
+                std::declval<typename __tuple_it_star_type<std::tuple<T>>::type>(),
                 std::declval<typename __tuple_it_star_type<std::tuple<Args...>>::type>()
         ));
     };
+
+    template<typename... Args>
+    struct __tuple_it_iterable_value_type {
+        using type = typename __tuple_it_star_type<typename __tuple_it_from_iterable_type<Args...>::type>::type;
+    };
+
+    template<typename... Args>
+    struct __tuple_it_iterable_forward_value_type {
+        using type = typename __tuple_it_forward_star_type<typename __tuple_it_from_iterable_type<Args...>::type>::type;
+    };
+
+
 
     template<size_t N, typename... Args>
     inline typename std::enable_if<__EQ(N, std::tuple_size<std::tuple<Args...>>::value), bool>::type

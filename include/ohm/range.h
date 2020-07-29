@@ -1,5 +1,5 @@
 //
-// Created by seetadev on 2020/7/20.
+// Created by kier on 2020/7/20.
 //
 
 #ifndef OMEGA_RANGE_H

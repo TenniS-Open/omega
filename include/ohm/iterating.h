@@ -1,5 +1,5 @@
 //
-// Created by seetadev on 2020/7/28.
+// Created by kier on 2020/7/28.
 //
 
 #ifndef OMEGA_ITERATING_H
