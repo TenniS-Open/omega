@@ -23,6 +23,8 @@ int main() {
     ohm::println(b);
     ohm::println(c);
 
+    print(endl);
+
     ohm::println(sep(" + "), 1, 2, 3, sep(), " ^ ", sep(" * "), 4, 5, 6);
 
     return 0;

@@ -339,11 +339,22 @@ namespace ohm {
         void print(std::ostream &out, const type &x) {}
     };
 
+    template <>
+    struct printable<std::ostream &(std::ostream &)> {
+        using type = std::ostream &(std::ostream &);
+
+        void print(std::ostream &out, type x) {
+            x(out);
+        }
+    };
+
     inline Sep sep(const std::string &s) { return Sep(s); }
 
     inline Sep sep(const std::string &s, int n) { return Sep(s, n); }
 
     inline SepNil sep() { return {}; }
+
+    inline std::ostream &endl(std::ostream &out) { return out << std::endl; }
 }
 
 #endif //OMEGA_PRINT_H
