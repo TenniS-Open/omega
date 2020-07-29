@@ -6,6 +6,7 @@
 #include "ohm/range.h"
 
 int main() {
+    using namespace ohm;
     int _a[12] = {1, 2};
     std::vector<int> a(_a, _a + 2);
     using A = decltype(a);
@@ -21,6 +22,8 @@ int main() {
     ohm::println(a);
     ohm::println(b);
     ohm::println(c);
+
+    ohm::println(sep(" + "), 1, 2, 3, sep(), " ^ ", sep(" * "), 4, 5, 6);
 
     return 0;
 }
