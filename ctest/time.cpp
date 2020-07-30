@@ -7,6 +7,7 @@
 
 int main() {
     using namespace ohm;
+    auto beg = now();
     println("Now time: ", now());
     println("Spent time: ", time::ns(1567));
     println("Spent time: ", time::ms(156));
@@ -14,5 +15,7 @@ int main() {
     println("Spent time: ", time::sec(1567));
     auto time = time::sec(4) + time::min(5);
     println("Count seconds of 5m4s: ", time::count<time::sec>(time));
+    auto end = now();
+    println("End spent time: ", end - beg);
 }
 
