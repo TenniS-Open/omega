@@ -10,6 +10,11 @@ void print_int(int a) {
     ohm::println(a);
 }
 
+float print_float(float a) {
+    ohm::println(a);
+    return 0;
+}
+
 class A {
 public:
     A() {
@@ -26,6 +31,7 @@ public:
 int main() {
     using namespace ohm;
     println(mstring(12334523));
+    ohm::void_call(print_float, 0);
     ohm::void_call(print_int, 1);
     auto func = void_bind(print_int, 2);
     func();
