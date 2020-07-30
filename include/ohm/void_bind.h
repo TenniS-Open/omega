@@ -19,7 +19,8 @@ namespace ohm {
         static auto Type(...) -> void;
 
         template<typename U>
-        static auto Check(int) -> decltype(std::bind(std::declval<U>(), std::declval<Args>()...)(), std::true_type());
+        static auto Check(int) -> decltype(std::declval<typename std::add_const<
+                decltype(std::bind(std::declval<U>(), std::declval<Args>()...))>::type>()(), std::true_type());
 
         template<typename U>
         static auto Check(...) -> decltype(std::false_type());
@@ -47,15 +48,14 @@ namespace ohm {
             VoidOperator>::type
     void_bind(FUNC func, Args &&... args) {
         auto void_func = std::bind(func, std::forward<Args>(args)...);
-        /// TODO: const cast is not popular method, just to fix some dangerous action and be avoid of obscure error.
-        return [void_func]() -> void { const_cast<decltype(void_func)&>(void_func)(); };
+        return [void_func]() -> void { void_func(); };
     }
 
     template<typename FUNC, typename... Args,
             typename = typename std::enable_if<can_be_bind<FUNC, Args...>::value>::type>
     inline void void_call(FUNC func, Args &&... args) {
         void_bind(func, std::forward<Args>(args)...)();
-    };
+    }
 }
 
 #endif //OMEGA_VOID_BIND_H
