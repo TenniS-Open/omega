@@ -181,6 +181,62 @@ namespace ohm {
     };
 
     template <typename T>
+    class LoopFor {
+    public:
+        using self = LoopFor;
+        using value_type = typename std::iterator_traits<T>::value_type;
+        using iterator_value_type = typename std::iterator_traits<T>::value_type;
+        using iterator_difference_type = typename std::iterator_traits<T>::difference_type;
+        using iterator_pointer = typename std::iterator_traits<T>::pointer;
+        using iterator_reference = typename std::iterator_traits<T>::reference;
+
+        LoopFor(T begin, T end)
+                : m_begin(begin, begin, end), m_end(end, begin, end) {}
+
+        class Iterator : public std::iterator<std::input_iterator_tag,
+                iterator_value_type, iterator_difference_type,
+                iterator_pointer, iterator_reference> {
+        public:
+            Iterator(T cur, T begin, T end)
+                : m_cur(begin), m_begin(begin), m_end(end) {}
+
+            Iterator operator++(int) {
+                auto tmp = *this;
+                ++m_cur;
+                if (m_cur == m_end) m_cur = m_begin;
+                return tmp;
+            }
+
+            Iterator &operator++() {
+                ++m_cur;
+                if (m_cur == m_end) m_cur = m_begin;
+                return *this;
+            }
+
+            iterator_reference operator*() const { return *const_cast<T&>(m_cur); }
+
+            iterator_pointer operator->() const { return &*const_cast<T&>(m_cur); }
+
+            bool operator!=(const Iterator &other) { return true; }
+
+            bool operator==(const Iterator &other) { return !operator!=(other); }
+
+        private:
+            T m_cur;
+            T m_begin;
+            T m_end;
+        };
+
+        Iterator begin() const { return m_begin; }
+
+        Iterator end() const { return m_end; }
+
+    private:
+        Iterator m_begin;
+        Iterator m_end;
+    };
+
+    template <typename T>
     typename std::enable_if<
             std::is_copy_constructible<T>::value,
             LoopRValueCopy<T>>::type
@@ -211,6 +267,14 @@ namespace ohm {
             LoopLValue<T>>::type
     loop(T &value) {
         return LoopLValue<T>(value);
+    }
+
+    template <typename T>
+    typename std::enable_if<
+            is_iterable<T>::value,
+            LoopFor<typename has_begin<T>::type>>::type
+    loop_for(T &&range) {
+        return LoopFor<typename has_begin<T>::type>(range.begin(), range.end());
     }
 }
 

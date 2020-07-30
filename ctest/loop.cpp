@@ -37,6 +37,7 @@ int main() {
     auto d = loop(3);
     auto e = loop("4");
     auto f = loop(F(5));
+    auto g = loop_for(range(1, 4, 2));
 
     println(classname<decltype(a)>());
     println(classname<decltype(b)>());
@@ -44,16 +45,17 @@ int main() {
     println(classname<decltype(d)>());
     println(classname<decltype(e)>());
     println(classname<decltype(f)>());
+    println(classname<decltype(g)>());
 
-    println(classname<decltype(zip(a, b, c, d, e, f))::value_type>());
-    println(classname<decltype(zipped(a, b, c, d, e, f))::value_type>());
+    println(classname<decltype(zip(a, b, c, d, e, f, g))::value_type>());
+    println(classname<decltype(zipped(a, b, c, d, e, f, g))::value_type>());
 
-    for (auto i : zip(a, b, c, d, e, f)) {
+    for (auto i : zip(a, b, c, d, e, f, g)) {
         println(i);
     }
 
     // must failed on zipped(a, b, c, d, e, f), because it not copyable
-    for (auto &i : zipped(a, b, c, d, e)) {
+    for (auto &i : zipped(a, b, c, d, e, g)) {
         println(i);
     }
 
