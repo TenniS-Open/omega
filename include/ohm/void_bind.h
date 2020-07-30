@@ -47,6 +47,7 @@ namespace ohm {
             VoidOperator>::type
     void_bind(FUNC func, Args &&... args) {
         auto void_func = std::bind(func, std::forward<Args>(args)...);
+        /// TODO: const cast is not popular method, just to fix some dangerous action and be avoid of obscure error.
         return [void_func]() -> void { const_cast<decltype(void_func)&>(void_func)(); };
     }
 
