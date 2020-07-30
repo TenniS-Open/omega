@@ -47,7 +47,7 @@ namespace ohm {
             VoidOperator>::type
     void_bind(FUNC func, Args &&... args) {
         auto void_func = std::bind(func, std::forward<Args>(args)...);
-        return [void_func]() -> void { void_func(); };
+        return [void_func]() -> void { const_cast<decltype(void_func)&>(void_func)(); };
     }
 
     template<typename FUNC, typename... Args,
