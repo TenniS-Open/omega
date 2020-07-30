@@ -16,10 +16,6 @@ namespace ohm {
 
         need &operator=(const need &that) = delete;
 
-        template<typename FUNC>
-        explicit need(FUNC func)
-            : task(void_bind(func)) {}
-
         template<typename FUNC, typename... Args,
                 typename = typename std::enable_if<can_be_bind<FUNC, Args...>::value>::type>
         explicit need(FUNC func, Args &&... args)

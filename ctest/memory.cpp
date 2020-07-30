@@ -28,7 +28,12 @@ public:
     }
 };
 
+void printend() {
+    ohm::println("All over!");
+}
+
 int main() {
+    ohm_need(printend);
     using namespace ohm;
     println(mstring(12334523));
     ohm::void_call(print_float, 0);
