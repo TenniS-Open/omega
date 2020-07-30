@@ -10,6 +10,22 @@
 
 namespace ohm {
     template<typename T, typename ...Args>
+    struct can_be_called {
+    private:
+        template<typename U>
+        static auto Type(int) -> decltype(std::declval<U>()(std::declval<Args>()...));
+        template<typename U>
+        static auto Type(...) -> void;
+        template<typename U>
+        static auto Check(int) -> decltype(std::declval<U>()(std::declval<Args>()...), std::true_type());
+        template<typename U>
+        static auto Check(...) -> decltype(std::false_type());
+    public:
+        static constexpr bool value = std::is_same<decltype(Check<T>(0)), std::true_type>::value;
+        using return_type = decltype(Type<T>(0));
+    };
+
+    template<typename T, typename ...Args>
     struct has_operator_implicit_arguments {
     private:
         template<typename U>

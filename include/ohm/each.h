@@ -11,7 +11,7 @@
 namespace ohm {
     template<typename FUNC, typename T, typename = typename std::enable_if<
             is_iterable<T>::value &&
-            has_operator_implicit_arguments<FUNC, typename has_iterator<T>::forward_value_type>::value>::type>
+            can_be_called<FUNC, typename has_iterator<T>::forward_value_type>::value>::type>
     void each(FUNC func, T &&t) {
         for (auto &&x : t) {
             func(x);
