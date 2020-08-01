@@ -7,15 +7,15 @@
 
 #include "print.h"
 #include "macro.h"
-
+#include "except.h"
 #include "time.h"
 
 namespace ohm {
     enum LogLevel {
         LOG_NONE = 0,
         LOG_DEBUG = 1,
-        LOG_STATUS = 2,
-        LOG_INFO = 3,
+        LOG_INFO = 2,
+        LOG_WARNING = 3,
         LOG_ERROR = 4,
         LOG_FATAL = 5,
     };
@@ -103,27 +103,42 @@ namespace ohm {
 
     inline const char *__log_level_to_string(LogLevel level) {
         switch (level) {
-            default:            return "[      ]";
-            case LOG_NONE:      return "[      ]";
-            case LOG_DEBUG:     return "[DEBUG] ";
-            case LOG_STATUS:    return "[STATUS]";
-            case LOG_INFO:      return "[INFO]  ";
-            case LOG_ERROR:     return "[ERROR] ";
-            case LOG_FATAL:     return "[FATAL] ";
+            default:            return "[       ]";
+            case LOG_NONE:      return "[       ]";
+            case LOG_DEBUG:     return "[DEBUG]  ";
+            case LOG_INFO:      return "[INFO]   ";
+            case LOG_WARNING:   return "[WARNING]";
+            case LOG_ERROR:     return "[ERROR]  ";
+            case LOG_FATAL:     return "[FATAL]  ";
         }
     }
 
     template <typename T>
     inline const char *__log_level_string(const T &t) { return __log_level_to_string(__log_level<T>(t)); }
 
+    template <typename T>
+    inline bool __log_need_eject(const T &t) { return __log_level<T>(t) >= LOG_ERROR; }
+
+    template <typename T>
+    inline bool __log_need_fatal(const T &t) { return __log_level<T>(t) >= LOG_FATAL; }
+
 #define ohm_log(log, ...) do {\
         auto &&ohm_auto_name(__ohm_log) = log; \
-        if (ohm::__log_enable(ohm_auto_name(__ohm_log))) {\
+        if (ohm::__log_enable(ohm_auto_name(__ohm_log)) \
+                || ohm::__log_need_eject(log)) {\
+            auto body = ohm::sprint(\
+                "[", __func__, " ", ohm::__log_cut_filename(__FILE__), ":", __LINE__, "]", \
+                ": ", ## __VA_ARGS__); \
             ohm::println(ohm_auto_name(__ohm_log), \
                 "[", ohm::now(), "]", \
                 ohm::__log_level_string(ohm_auto_name(__ohm_log)), \
-                "[", __func__, " ", ohm::__log_cut_filename(__FILE__), ":", __LINE__, "]", \
-                ": ", ## __VA_ARGS__); \
+                body); \
+            if (ohm::__log_need_fatal(log)) { \
+                exit(0x7E); \
+            } \
+            if (ohm::__log_need_eject(log)) { \
+                throw ohm::EjectionException(body); \
+            } \
         } \
     } while (false)
 }

@@ -5,12 +5,18 @@
 #include "ohm/logger.h"
 
 int main() {
-    using namespace ohm;
-    Logger logger(LOG_INFO);
+    ohm::Logger logger(ohm::LOG_INFO);
 
-    ohm_log(logger(LOG_INFO), "INFO");
-    ohm_log(logger(LOG_DEBUG), "DEBUG");
-    ohm_log(logger(LOG_ERROR), "ERROR");
+    ohm_log(logger(ohm::LOG_INFO), "INFO");
+    ohm_log(logger(ohm::LOG_DEBUG), "DEBUG");
+
+    try {
+        ohm_log(logger(ohm::LOG_ERROR), "ERROR");
+    } catch (const std::exception &e) {
+        ohm::println("Got Exception: ", e.what());
+    }
+
+    ohm_log(logger(ohm::LOG_FATAL), "FATAL");
 
     return 0;
 }

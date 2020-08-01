@@ -14,7 +14,13 @@
 #endif
 
 namespace ohm {
-    class EjectionException : std::exception {};
+    class EjectionException : public std::logic_error {
+    public:
+        using self = EjectionException;
+        using supper = std::logic_error;
+
+        explicit EjectionException(const std::string &msg) : supper(msg) {}
+    };
 }
 
 #endif //OMEGA_EXCEPT_H
