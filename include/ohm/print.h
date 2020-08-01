@@ -255,6 +255,12 @@ namespace ohm {
         stream.print(sprint(_..., "\n"));
     }
 
+    template <typename T>
+    struct is_print_stream {
+        static constexpr bool value = std::is_base_of<PrintStream, T>::value ||
+                std::is_base_of<std::ostream, T>::value;
+    };
+
     template<typename T>
     struct printable<T, typename std::enable_if<
             is_iterable<T>::value &&

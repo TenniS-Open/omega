@@ -20,6 +20,26 @@ namespace ohm {
         LOG_FATAL = 5,
     };
 
+    class __ErrorStream : public PrintStream {
+    public:
+        void print(const std::string &ms) const final {
+            std::cerr << ms;
+            std::cerr.flush();
+        }
+    };
+
+    class __FatalStream : public PrintStream {
+    public:
+        void print(const std::string &ms) const final {
+            std::cerr << ms;
+            std::cerr.flush();
+        }
+    };
+
+    inline __ErrorStream log_error() { return __ErrorStream(); }
+
+    inline __FatalStream log_fatal() { return __FatalStream(); }
+
     class LogStream : public PrintStream {
     public:
         using self = LogStream;
@@ -100,6 +120,12 @@ namespace ohm {
 
     template <>
     inline LogLevel __log_level<LogStream>(const LogStream &stream) { return stream.level(); }
+
+    template <>
+    inline LogLevel __log_level<__ErrorStream>(const __ErrorStream &) { return LOG_ERROR; }
+
+    template <>
+    inline LogLevel __log_level<__FatalStream>(const __FatalStream &) { return LOG_FATAL; }
 
     inline const char *__log_level_to_string(LogLevel level) {
         switch (level) {
