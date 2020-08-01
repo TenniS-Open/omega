@@ -15,6 +15,15 @@
 #include "type_cast.h"
 
 namespace ohm {
+    class PrintStream {
+    public:
+        using self = PrintStream;
+
+        virtual ~PrintStream() = default;
+
+        virtual void print(const std::string &msg) const = 0;
+    };
+
     class Sep {
     public:
         explicit Sep(std::string sep, int n = -1) : sep(std::move(sep)), n(n) {}
@@ -232,6 +241,18 @@ namespace ohm {
     inline void println(std::ostream &stream, const Args &..._) {
         stream_print(stream, _..., "\n");
         stream.flush();
+    }
+
+    template<typename T, typename... Args,
+            typename = typename std::enable_if<std::is_base_of<PrintStream, T>::value>::type>
+    inline void print(const T &stream, const Args &..._) {
+        stream.print(sprint(_...));
+    }
+
+    template<typename T, typename... Args,
+            typename = typename std::enable_if<std::is_base_of<PrintStream, T>::value>::type>
+    inline void println(const T &stream, const Args &..._) {
+        stream.print(sprint(_..., "\n"));
     }
 
     template<typename T>

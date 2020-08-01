@@ -13,4 +13,8 @@
 #define OHM_NOEXCEPT noexcept
 #endif
 
+namespace ohm {
+    class EjectionException : std::exception {};
+}
+
 #endif //OMEGA_EXCEPT_H
