@@ -1,4 +1,4 @@
-# omega
+# omega (๑•̀ω•́ ๑)
 
 #### 介绍
 header only library, providing common useful module.
