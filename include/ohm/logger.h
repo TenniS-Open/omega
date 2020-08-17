@@ -20,31 +20,47 @@ namespace ohm {
         LOG_FATAL = 5,
     };
 
-    class __ErrorStream : public PrintStream {
+    class __StdLogStream : public PrintStream {
     public:
+        using self = __StdLogStream;
+
+        __StdLogStream(LogLevel level) : m_level(level) {}
+
+        LogLevel level() const { return m_level; }
+
         void print(const std::string &ms) const final {
-            std::cerr << ms;
-            std::cerr.flush();
+            if (m_level >= LOG_ERROR) {
+                if (ms.back() != '\n') {
+                    std::cerr << ms + "\n" << std::flush;
+                } else {
+                    std::cerr << ms << std::flush;
+                }
+            } else {
+                if (ms.back() != '\n') {
+                    std::cout << ms + "\n" << std::flush;
+                } else {
+                    std::cout << ms << std::flush;
+                }
+            }
         }
+
+    private:
+        LogLevel m_level;
     };
 
-    class __FatalStream : public PrintStream {
-    public:
-        void print(const std::string &ms) const final {
-            std::cerr << ms;
-            std::cerr.flush();
-        }
-    };
+    inline __StdLogStream L(LogLevel level) { return __StdLogStream(level); }
 
-    inline __ErrorStream log_error() { return __ErrorStream(); }
+    inline __StdLogStream log_error() { return L(LOG_ERROR); }
 
-    inline __FatalStream log_fatal() { return __FatalStream(); }
+    inline __StdLogStream log_fatal() { return L(LOG_FATAL); }
+
+    class Logger;
 
     class LogStream : public PrintStream {
     public:
         using self = LogStream;
 
-        LogStream(LogLevel level, const PrintStream &engine, const LogLevel *filter = nullptr)
+        LogStream(LogLevel level, const Logger &engine, const LogLevel *filter = nullptr)
             : m_level(level), m_engine(&engine), m_filter(filter) {}
 
         bool enable() const {
@@ -53,12 +69,10 @@ namespace ohm {
 
         LogLevel level() const { return m_level; }
 
-        void print(const std::string &msg) const final {
-            if (!m_engine || !enable()) return;
-            m_engine->print(msg);
-        }
+        void print(const std::string &msg) const final;
+
     private:
-        const PrintStream *m_engine;
+        const Logger *m_engine;
         const LogLevel *m_filter;
         LogLevel m_level;
     };
@@ -71,19 +85,31 @@ namespace ohm {
         }
         
         void print(const std::string &msg) const final {
+            writeline(LOG_INFO, msg);
+        }
+
+        void writeline(LogLevel level, const std::string &msg) const {
             // do log stuff, to terminal, also to file and other types
-            if (msg.back() != '\n') {
-                ohm::println(msg);
-            } else {
-                ohm::print(msg);
-            }
+            auto line = msg.back() == '\n' ? msg : msg + "\n";
+            ohm::print(line);
         }
 
         LogStream operator()(LogLevel level) const { return LogStream(level, *this, &m_level); }
 
+        LogLevel change_level(LogLevel level) {
+            auto tmp = m_level;
+            m_level = level;
+            return tmp;
+        }
+
     private:
         LogLevel m_level;
     };
+
+    inline void LogStream::print(const std::string &msg) const {
+        if (!m_engine || !enable()) return;
+        m_engine->writeline(this->level(), msg);
+    }
 
     inline std::string __log_cut_filename(const std::string &filepath) {
         auto L = filepath.rfind('/');
@@ -122,11 +148,16 @@ namespace ohm {
     inline LogLevel __log_level<LogStream>(const LogStream &stream) { return stream.level(); }
 
     template <>
-    inline LogLevel __log_level<__ErrorStream>(const __ErrorStream &) { return LOG_ERROR; }
+    inline LogLevel __log_level<__StdLogStream>(const __StdLogStream &stream) { return stream.level(); }
 
     template <>
-    inline LogLevel __log_level<__FatalStream>(const __FatalStream &) { return LOG_FATAL; }
+    inline LogLevel __log_level<LogLevel>(const LogLevel &level) { return level; }
 
+    /**
+     *
+     * @param level
+     * @return
+     */
     inline const char *__log_level_to_string(LogLevel level) {
         switch (level) {
             default:            return "[       ]";
@@ -148,6 +179,19 @@ namespace ohm {
     template <typename T>
     inline bool __log_need_fatal(const T &t) { return __log_level<T>(t) >= LOG_FATAL; }
 
+    template <typename T, typename... Args>
+    inline void __log_print(const T &t, const Args &...args) {
+        ohm::println(t, args...);
+    }
+
+    template <typename... Args>
+    inline void __log_print(LogLevel level, const Args &...args) {
+        ohm::println(L(level), args...);
+    }
+
+/**
+ * @param log can be PrintStream, std::ostream, Logger
+ */
 #define ohm_log(log, ...) do {\
         auto &&ohm_auto_name(__ohm_log) = log; \
         if (ohm::__log_enable(ohm_auto_name(__ohm_log)) \
@@ -155,7 +199,7 @@ namespace ohm {
             auto body = ohm::sprint(\
                 "[", __func__, " ", ohm::__log_cut_filename(__FILE__), ":", __LINE__, "]", \
                 ": ", ## __VA_ARGS__); \
-            ohm::println(ohm_auto_name(__ohm_log), \
+            __log_print(ohm_auto_name(__ohm_log), \
                 "[", ohm::now(), "]", \
                 ohm::__log_level_string(ohm_auto_name(__ohm_log)), \
                 body); \
