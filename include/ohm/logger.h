@@ -267,7 +267,7 @@ namespace ohm {
 #define ohm_codeline ohm_codeline_construct(__func__, ohm::__log_cut_filename(__FILE__), __LINE__)
 
 /**
- * @param log can be PrintStream, std::ostream, Logger
+ * @param log can be PrintStream, Logger and LogLevel
  */
 #define ohm_log(__log, ...) do {\
         auto &&ohm_auto_name(__ohm_log) = __log; \
