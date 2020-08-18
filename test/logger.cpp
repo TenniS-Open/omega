@@ -6,11 +6,16 @@
 
 int main() {
     // build logger object to control log dest
-    ohm::Logger logger(ohm::LOG_INFO);
+    ohm::Logger logger("TestLogger", ohm::LOG_INFO);
 
     // change log level, greater than level will output.
     // won't change error eject
     logger.change_level(ohm::LOG_DEBUG);
+
+    // use log directly
+    auto t = ohm_codeline;
+    ohm::log(ohm::LOG_INFO, "A", ohm_codeline, "AD");
+    ohm::log(ohm::LOG_INFO, "B", ohm_codeline, "BD");
 
     // log with logger object
     ohm_log(logger(ohm::LOG_INFO), "Log [INFO] to logger");
@@ -24,14 +29,14 @@ int main() {
         // after log error, ohm_log will eject an EjectionException with log message
         ohm_log(logger(ohm::LOG_ERROR), "Throw EjectionException");
     } catch (const std::exception &e) {
-        ohm::println("Got Exception: ", e.what());
+        ohm::println(std::cerr, "Got Exception: ", e.what());
     }
 
     try {
         // print error message to console, then throw EjectionException
         ohm_log(ohm::LOG_ERROR, " Not use logger log, still throw EjectionException");
     } catch (const std::exception &e) {
-        ohm::println("Got Exception: ", e.what());
+        ohm::println(std::cerr, "Got Exception: ", e.what());
     }
 
     // print fatal message to console, the call exit(0x7E)

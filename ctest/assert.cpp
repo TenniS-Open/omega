@@ -22,12 +22,11 @@ int main() {
         ohm::println("(2 == N(1)) [Check]");
     }
 
-    ohm::Logger log;
+    ohm::Logger log("TestAssert");
 
     try {
         // assert with logger, write to log if failed.
         ohm_assert(3 == N(2), log, "3 must equal 2.");
-        ohm::print("AAA");
     } catch (...) {
         ohm::println("(3 == N(2)) [Check]");
     }
