@@ -34,17 +34,26 @@ namespace ohm {
     }
 }
 
-#define ohm_assert(cond, log, ...) \
+#define __ohm_assert(cond, cont, log, ...) \
     if (!(cond)) do { \
         auto constexpr ohm_auto_name(__is_logger) = \
                 std::is_convertible<decltype(log), const ohm::Logger&>::value; \
         if (ohm_auto_name(__is_logger)) { \
-            ohm_log(ohm::__forward_assert_logger(log), "Assertion failed: ", "(" #cond ")", \
+            ohm_log(ohm::__forward_assert_logger(log), "Assertion failed: ", "(" #cont ")", \
             ". ", ## __VA_ARGS__); \
         } else { \
-            ohm_log(ohm::LOG_ERROR, "Assertion failed: ", "(" #cond ")", \
+            ohm_log(ohm::LOG_ERROR, "Assertion failed: ", "(" #cont, ")", \
             ". ", log, ## __VA_ARGS__); \
         } \
     } while (false)
+
+#define ohm_assert(cond, log, ...) __ohm_assert(cond, cond, log, ## __VA_ARGS__)
+
+#define ohm_assert_eq(a, b, log, ...) __ohm_assert((a) == (b), a == b, log, ## __VA_ARGS__)
+#define ohm_assert_ne(a, b, log, ...) __ohm_assert((a) != (b), a != b, log, ## __VA_ARGS__)
+#define ohm_assert_gt(a, b, log, ...) __ohm_assert((a) > (b), a > b, log, ## __VA_ARGS__)
+#define ohm_assert_lt(a, b, log, ...) __ohm_assert((a) < (b), a < b, log, ## __VA_ARGS__)
+#define ohm_assert_ge(a, b, log, ...) __ohm_assert((a) >= (b), a >= b, log, ## __VA_ARGS__)
+#define ohm_assert_le(a, b, log, ...) __ohm_assert((a) <= (b), a <= b, log, ## __VA_ARGS__)
 
 #endif //OMEGA_ASSERT_H
