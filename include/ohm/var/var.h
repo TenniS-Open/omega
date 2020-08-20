@@ -107,8 +107,12 @@ namespace ohm {
         }
 
         Var operator[](const std::string &key) {
-            if (!m_var) throw VarNotSupportSlice(notation::type::Undefined);
-            if (!m_var->is_object()) throw VarNotSupportSlice(m_var->code);
+            if (!m_var) {
+                // throw VarNotSupportSlice(notation::type::Undefined);
+                m_var = notation::code_type<notation::type::Object>::type::Make();
+            } else if (!m_var->is_object()) {
+                throw VarNotSupportSlice(m_var->code);
+            }
             auto data = reinterpret_cast<notation::Object*>(m_var.get());
             auto it = data->data.find(key);
             if (it == data->data.end()) {

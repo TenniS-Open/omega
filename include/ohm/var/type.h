@@ -75,27 +75,31 @@ namespace ohm {
         };
 
 
-        template<typename T>
+        template<typename T, typename=void>
         struct type_code {
         };
 
         template<typename T>
-        struct type_code<const T>  {
+        struct type_code<const T, typename std::enable_if<
+                std::is_integral<decltype(type_code<T>::code)>::value>::type>  {
             static constexpr DataType code = type_code<T>::code;
         };
 
         template<typename T>
-        struct type_code<const T &>  {
+        struct type_code<const T &, typename std::enable_if<
+                std::is_integral<decltype(type_code<T>::code)>::value>::type>  {
             static constexpr DataType code = type_code<T>::code;
         };
 
         template<typename T>
-        struct type_code<T &>  {
+        struct type_code<T &, typename std::enable_if<
+                std::is_integral<decltype(type_code<T>::code)>::value>::type>  {
             static constexpr DataType code = type_code<T>::code;
         };
 
         template<typename T>
-        struct type_code<T&&>  {
+        struct type_code<T&&, typename std::enable_if<
+                std::is_integral<decltype(type_code<T>::code)>::value>::type>  {
             static constexpr DataType code = type_code<T>::code;
         };
 
