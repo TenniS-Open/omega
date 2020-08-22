@@ -348,7 +348,6 @@ namespace ohm {
             SWITCH
             CASE(notation::type::Array)
                 data.push_back(var);
-                break;
             END
         }
 
@@ -357,7 +356,6 @@ namespace ohm {
             SWITCH
             CASE(notation::type::Array)
                 data.resize(size);
-                return;
             END
         }
 
