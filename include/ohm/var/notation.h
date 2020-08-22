@@ -35,7 +35,7 @@ namespace ohm {
         template<DataType _Type, typename _Element>
         class ElementBase : public Element {
         public:
-            using Type = _Element;
+            using Content = _Element;
             _Element data;
 
             using self = ElementBase;

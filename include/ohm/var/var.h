@@ -8,10 +8,12 @@
 #include "notation.h"
 #include "type.h"
 #include "scalar.h"
+#include "boolean.h"
 #include "null.h"
 #include "./string.h"
 #include "array.h"
 #include "object.h"
+#include "../print.h"
 
 #include "notation.h"
 
@@ -27,7 +29,7 @@ namespace ohm {
     template <typename T>
     struct is_var_assignable<T, typename std::enable_if<
             notation::is_notation_type<typename remove_cr<T>::type>::value &&
-            std::is_constructible<T, typename notation::type_type<T>::type>::value
+            std::is_constructible<typename notation::type_type<T>::type, T>::value
             >::type> : public std::true_type {};
 
 //    inline constexpr bool is_var_code_signed()
@@ -39,11 +41,12 @@ namespace ohm {
 //        return false;
 //    }
 
-    notation::Element::shared code2object(notation::DataType code) {
+    inline notation::Element::shared code2object(notation::DataType code) {
         using namespace notation;
         switch (code & 0xFF00) {
             default: return nullptr;
             case type::None: return code_type<type::None>::type::Make();
+            case type::Boolean: return code_type<type::Boolean>::type::Make();
             case type::String: return code_type<type::String>::type::Make();
             case type::Array: return code_type<type::Array>::type::Make();
             case type::Object: return code_type<type::Object>::type::Make();
@@ -175,40 +178,73 @@ namespace ohm {
 #pragma push_macro("CHECK")
 #pragma push_macro("SWITCH")
 #pragma push_macro("CASE")
+#pragma push_macro("ELSE")
 #pragma push_macro("END")
+#pragma push_macro("DEFAULT")
+#pragma push_macro("UNEXPECTED_END")
+#pragma push_macro("SWITCH_TYPE")
+#pragma push_macro("CASE_TYPE")
+#pragma push_macro("DEFAULT_TYPE")
+#pragma push_macro("END_TYPE")
 
+/**
+ * If no CASE matched, it will throw VarNotSupportedException
+ * @param op string tell check operator name
+ */
 #define CHECK(op) \
     std::string __check_op = op; \
     bool __checked = false; \
     std::vector<notation::DataType> __checked_type;
 
+/**
+ * Use after CHECK, following CASE ELSE END UNEXPECTED_END DEFAULT
+ */
 #define SWITCH \
     {
 
+/**
+ * The codes following case, will run if main_type matched
+ * The CASE must follow SWITCH, with ELSE, END, UNEXPECTED_END, DEFAULT following
+ */
 #define CASE(main_type) \
     } \
     __checked_type.push_back(main_type); \
-    if (m_var && (m_var->code & 0xFF00) == (main_type & 0xFF00)) { \
+    if (!__checked && m_var && (m_var->code & 0xFF00) == (main_type & 0xFF00)) { \
         __checked = true; \
         auto &data = reinterpret_cast<typename notation::code_type<main_type>::type*>(m_var.get())->data;
 
+/**
+ * Use for Has or not return function, achive if no case matched.
+ * After this, END and DEFAULT won't check if case matched.
+ * Only one or no ELSE can be set.
+ */
 #define ELSE \
     } \
-    { \
+    if (!__checked) { \
         __checked = true;
 
+/**
+ * following CASE or ELSE, active if no CASE or ELSE matched.
+ * This line will throw VarNotSupportedException if no CASE or ELSE matched.
+ */
 #define END \
     } \
     if (!__checked) { \
         throw VarOperatorNotSupported(m_var ? m_var->code : notation::type::Undefined, \
             __check_op, __checked_type); \
     }
-
+/**
+ * throw VarNotSupportedException if got this line. it means no return above.
+ */
 #define UNEXPECTED_END \
     } \
     throw VarOperatorNotSupported(m_var ? m_var->code : notation::type::Undefined, \
         __check_op, __checked_type);
 
+/**
+ * return expr if case matched but on value return.
+ * throw VarNotSupportedException no case matched.
+ */
 #define DEFAULT(expr) \
     } \
     if (!__checked) { \
@@ -216,6 +252,30 @@ namespace ohm {
             __check_op, __checked_type); \
     } else { \
         return expr; \
+    }
+
+#define TYPE(sub_type, codes) \
+    if ((m_var->code & 0xFF) == sub_type) { \
+        using type = notation::code_type<sub_type>::type; \
+        codes \
+        ; \
+    }
+
+#define SWITCH_TYPE(_type_code) \
+    switch ((_type_code) & 0xFF) { \
+    case 0xFF: {
+
+#define CASE_TYPE(sub_type) \
+    } \
+    case sub_type: { \
+        using type = notation::code_type<sub_type>::type; \
+
+#define DEFAULT_TYPE(codes) \
+    } \
+    default : { \
+
+#define END_TYPE \
+    } \
     }
 
     class Var {
@@ -360,6 +420,7 @@ namespace ohm {
         }
 
         size_t size() const {
+#define TYPE_CODES print(*reinterpret_cast<const type*>(&data))
             CHECK("size")
             SWITCH
             CASE(notation::type::Array)
@@ -383,9 +444,16 @@ namespace ohm {
     };
 }
 
-#pragma pop_macro("END")
-#pragma pop_macro("CASE")
-#pragma pop_macro("SWITCH")
 #pragma pop_macro("CHECK")
+#pragma pop_macro("SWITCH")
+#pragma pop_macro("CASE")
+#pragma pop_macro("ELSE")
+#pragma pop_macro("END")
+#pragma pop_macro("DEFAULT")
+#pragma pop_macro("UNEXPECTED_END")
+#pragma pop_macro("SWITCH_TYPE")
+#pragma pop_macro("CASE_TYPE")
+#pragma pop_macro("DEFAULT_TYPE")
+#pragma pop_macro("END_TYPE")
 
 #endif //OMEGA_VAR_VAR_H

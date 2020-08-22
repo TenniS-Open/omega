@@ -12,9 +12,41 @@ namespace ohm {
         template<typename T>
         using Scalar = ElementBase<type_code<T>::code, T>;
 
+        /**
+         * Use Boolean because binary define must has 1 byte.
+         * Spicelly in std::vector<Boolean>
+         */
+        struct Boolean {
+        public:
+            using Type = uint8_t;
+            Type data;
+
+            using self = Boolean;
+
+            Boolean() : data(0) {}
+
+            Boolean(bool b) : data(b ? 1 : 0) {}
+
+            template <typename T, typename=typename std::enable_if<
+                    std::is_integral<T>::value || std::is_floating_point<T>::value>::type>
+            Boolean(T b) : data(Type(b)) {}
+
+            Boolean(const Boolean&) = default;
+
+            template <typename T, typename=typename std::enable_if<
+                    std::is_integral<T>::value || std::is_same<T, bool>::value>::type>
+            operator T() const { return T(data); }
+        };
+
+        namespace {
+            Boolean TRUE = Boolean(1);
+            Boolean FALSE = Boolean(0);
+        }
+
 #define __DEFINE_TYPE_CODE(_type, _code) \
         template <> struct type_code<_type> { static const DataType code = type::Scalar | _code; }; \
-        template <> struct code_type<type::Scalar | _code> { using type = Scalar<_type>; };
+        template <> struct code_type<type::Scalar | _code> { using type = Scalar<_type>; }; \
+        template <> struct code_type<_code> { using type = _type; };
 
         __DEFINE_TYPE_CODE(int8_t, type::INT8)
         __DEFINE_TYPE_CODE(uint8_t, type::UINT8)
@@ -24,7 +56,7 @@ namespace ohm {
         __DEFINE_TYPE_CODE(uint32_t, type::UINT32)
         __DEFINE_TYPE_CODE(int64_t, type::INT64)
         __DEFINE_TYPE_CODE(uint64_t, type::UINT64)
-        __DEFINE_TYPE_CODE(bool, type::BOOLEAN)
+        __DEFINE_TYPE_CODE(Boolean, type::BOOLEAN)
         __DEFINE_TYPE_CODE(float, type::FLOAT32)
         __DEFINE_TYPE_CODE(double, type::FLOAT64)
         __DEFINE_TYPE_CODE(char, type::CHAR8)
@@ -39,6 +71,10 @@ namespace ohm {
 
 #undef __DEFINE_TYPE_CODE
 
+        struct ElementVoid {};
+
+        template <> struct type_code<void> { static const DataType code = type::Scalar; }; \
+        template <> struct code_type<type::Scalar> { using type = ElementBase<type::Scalar, ElementVoid>; };
 
     }
 }

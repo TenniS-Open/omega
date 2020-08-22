@@ -9,18 +9,20 @@
 
 namespace ohm {
     namespace notation {
-        class ElementNone : public Element {
+        class None : public Element {
         public:
-            using self = ElementNone;
+            using self = None;
             using supper = Element;
 
-            ElementNone() : supper({type::None}) {}
+            int data[0];    // for
 
-            ElementNone(std::nullptr_t) : self() {}
+            None() : supper({type::None}) {}
+
+            None(std::nullptr_t) : self() {}
 
             operator bool() const { return false; }
 
-            static std::shared_ptr<ElementNone> Make() {
+            static std::shared_ptr<None> Make() {
                 return std::make_shared<self>();
             }
         };
@@ -32,7 +34,7 @@ namespace ohm {
 
         template<>
         struct code_type<type::None> {
-            using type = ElementNone;
+            using type = None;
         };
     }
 }
