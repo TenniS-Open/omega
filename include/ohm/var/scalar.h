@@ -27,13 +27,13 @@ namespace ohm {
 
             Boolean(bool b) : data(b ? 1 : 0) {}
 
-            template <typename T, typename=typename std::enable_if<
+            template<typename T, typename=typename std::enable_if<
                     std::is_integral<T>::value || std::is_floating_point<T>::value>::type>
             Boolean(T b) : data(Type(b)) {}
 
-            Boolean(const Boolean&) = default;
+            Boolean(const Boolean &) = default;
 
-            template <typename T, typename=typename std::enable_if<
+            template<typename T, typename=typename std::enable_if<
                     std::is_integral<T>::value || std::is_same<T, bool>::value>::type>
             operator T() const { return T(data); }
         };
@@ -71,10 +71,18 @@ namespace ohm {
 
 #undef __DEFINE_TYPE_CODE
 
-        struct ElementVoid {};
+        struct ElementVoid {
+        };
 
-        template <> struct type_code<void> { static const DataType code = type::Scalar; }; \
-        template <> struct code_type<type::Scalar> { using type = ElementBase<type::Scalar, ElementVoid>; };
+        template<>
+        struct type_code<void> {
+            static const DataType code = type::Scalar;
+        };
+
+        template<>
+        struct code_type<type::Scalar> {
+            using type = ElementBase<type::Scalar, ElementVoid>;
+        };
 
     }
 }

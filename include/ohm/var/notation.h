@@ -23,13 +23,32 @@ namespace ohm {
             DataType code;
 
             bool is_undefined() const { return code >= type::Defined; }
+
             bool is_null() const { return (code & 0xFF00) == type::None; }
+
+            bool is_boolean() const { return (code & 0xFF00) == type::Boolean; }
+
             bool is_scalar() const { return (code & 0xFF00) == type::Scalar; }
+
             bool is_string() const { return (code & 0xFF00) == type::String; }
+
             bool is_array() const { return (code & 0xFF00) == type::Array; }
+
             bool is_object() const { return (code & 0xFF00) == type::Object; }
+
             bool is_repeat() const { return (code & 0xFF00) == type::Repeat; }
+
             bool is_binary() const { return (code & 0xFF00) == type::Binary; }
+
+            bool is_integer() const {
+                auto sub_code = code & 0xFF;
+                return type::INT8 <= sub_code && sub_code <= type::UINT64;
+            }
+
+            bool is_float() const {
+                auto sub_code = code & 0xFF;
+                return type::FLOAT32 <= sub_code && sub_code <= type::FLOAT64;
+            }
         };
 
         template<DataType _Type, typename _Element>
