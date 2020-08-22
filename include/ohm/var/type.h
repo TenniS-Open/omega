@@ -74,7 +74,16 @@ namespace ohm {
         };
         struct complex128 : public placeholder<128> {
         };
-
+        struct unknown8 : public placeholder<8> {
+        };
+        struct unknown16 : public placeholder<16> {
+        };
+        struct unknown32 : public placeholder<32> {
+        };
+        struct unknown64 : public placeholder<64> {
+        };
+        struct unknown128 : public placeholder<128> {
+        };
 
         template<typename T, typename=void>
         struct type_code {

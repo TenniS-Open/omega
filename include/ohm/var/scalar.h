@@ -69,6 +69,12 @@ namespace ohm {
         __DEFINE_TYPE_CODE(complex64, type::COMPLEX64)
         __DEFINE_TYPE_CODE(complex128, type::COMPLEX128)
 
+        __DEFINE_TYPE_CODE(unknown8, type::UNKNOWN8)
+        __DEFINE_TYPE_CODE(unknown16, type::UNKNOWN16)
+        __DEFINE_TYPE_CODE(unknown32, type::UNKNOWN32)
+        __DEFINE_TYPE_CODE(unknown64, type::UNKNOWN64)
+        __DEFINE_TYPE_CODE(unknown128, type::UNKNOWN128)
+
 #undef __DEFINE_TYPE_CODE
 
         struct ElementVoid {

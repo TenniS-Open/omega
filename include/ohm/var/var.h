@@ -274,6 +274,7 @@ namespace ohm {
 #pragma push_macro("CASE_TYPE_CHAR")
 #pragma push_macro("CASE_TYPE_VOID")
 #pragma push_macro("CASE_TYPE_POINTER")
+#pragma push_macro("CASE_TYPE_ANY")
 
 /**
  * If no CASE matched, it will throw VarNotSupportedException
@@ -299,7 +300,8 @@ namespace ohm {
     __checked_type.push_back(main_type); \
     if (!__checked && m_var && (m_var->code & 0xFF00) == (main_type & 0xFF00)) { \
         __checked = true; \
-        auto &data = reinterpret_cast<typename notation::code_type<main_type>::type*>(m_var.get())->data;
+        auto &data = __at<typename notation::code_type<main_type>::type>(m_var.get())->data; \
+        (void)(data);
 
 /**
  * Use for Has or not return function, achive if no case matched.
@@ -342,13 +344,6 @@ namespace ohm {
         return expr; \
     }
 
-#define TYPE(sub_type, codes) \
-    if ((m_var->code & 0xFF) == sub_type) { \
-        using type = notation::code_type<sub_type>::type; \
-        codes \
-        ; \
-    }
-
 #define SWITCH_TYPE(_type_code) \
     switch ((_type_code) & 0xFF) { \
     case 0xFF: {
@@ -356,11 +351,9 @@ namespace ohm {
 #define CASE_TYPE(sub_type) \
     } \
     case sub_type: { \
-        using type = notation::code_type<sub_type>::type;
-
-#define CASE_NO_TYPE(sub_type) \
-    } \
-    case sub_type: {
+        using type = notation::code_type<sub_type>::type; \
+        auto &scalar = __at<notation::code_type<notation::type::Scalar | sub_type>::type>(m_var.get())->data; \
+        (void)(scalar);
 
 #define DEFAULT_TYPE(codes) \
     } \
@@ -388,14 +381,15 @@ namespace ohm {
     CASE_TYPE(notation::type::BOOLEAN) codes;
 
 #define CASE_TYPE_NOT_SUPPORTED(codes) \
-    CASE_NO_TYPE(notation::type::UNKNOWN8) codes; \
-    CASE_NO_TYPE(notation::type::UNKNOWN16) codes; \
-    CASE_NO_TYPE(notation::type::UNKNOWN32) codes; \
-    CASE_NO_TYPE(notation::type::UNKNOWN64) codes; \
-    CASE_NO_TYPE(notation::type::UNKNOWN128) codes; \
-    CASE_NO_TYPE(notation::type::COMPLEX32) codes; \
-    CASE_NO_TYPE(notation::type::COMPLEX64) codes; \
-    CASE_NO_TYPE(notation::type::COMPLEX128) codes;
+    CASE_TYPE(notation::type::FLOAT16) codes; \
+    CASE_TYPE(notation::type::UNKNOWN8) codes; \
+    CASE_TYPE(notation::type::UNKNOWN16) codes; \
+    CASE_TYPE(notation::type::UNKNOWN32) codes; \
+    CASE_TYPE(notation::type::UNKNOWN64) codes; \
+    CASE_TYPE(notation::type::UNKNOWN128) codes; \
+    CASE_TYPE(notation::type::COMPLEX32) codes; \
+    CASE_TYPE(notation::type::COMPLEX64) codes; \
+    CASE_TYPE(notation::type::COMPLEX128) codes;
 
 #define CASE_TYPE_CHAR(codes) \
     CASE_TYPE(notation::type::CHAR8) codes; \
@@ -406,6 +400,33 @@ namespace ohm {
     CASE_TYPE(notation::type::VOID) codes;
 
 #define CASE_TYPE_POINTER(codes) \
+    CASE_TYPE(notation::type::PTR) codes;
+
+#define CASE_TYPE_ANY(codes) \
+    CASE_TYPE(notation::type::INT8) codes; \
+    CASE_TYPE(notation::type::UINT8) codes; \
+    CASE_TYPE(notation::type::INT16) codes; \
+    CASE_TYPE(notation::type::UINT16) codes; \
+    CASE_TYPE(notation::type::INT32) codes; \
+    CASE_TYPE(notation::type::UINT32) codes; \
+    CASE_TYPE(notation::type::INT64) codes; \
+    CASE_TYPE(notation::type::UINT64) codes; \
+    CASE_TYPE(notation::type::FLOAT32) codes; \
+    CASE_TYPE(notation::type::FLOAT64) codes; \
+    CASE_TYPE(notation::type::BOOLEAN) codes; \
+    CASE_TYPE(notation::type::FLOAT16) codes; \
+    CASE_TYPE(notation::type::UNKNOWN8) codes; \
+    CASE_TYPE(notation::type::UNKNOWN16) codes; \
+    CASE_TYPE(notation::type::UNKNOWN32) codes; \
+    CASE_TYPE(notation::type::UNKNOWN64) codes; \
+    CASE_TYPE(notation::type::UNKNOWN128) codes; \
+    CASE_TYPE(notation::type::COMPLEX32) codes; \
+    CASE_TYPE(notation::type::COMPLEX64) codes; \
+    CASE_TYPE(notation::type::COMPLEX128) codes; \
+    CASE_TYPE(notation::type::CHAR8) codes; \
+    CASE_TYPE(notation::type::CHAR16) codes; \
+    CASE_TYPE(notation::type::CHAR32) codes; \
+    CASE_TYPE(notation::type::VOID) codes; \
     CASE_TYPE(notation::type::PTR) codes;
 
     class Var {
@@ -634,13 +655,12 @@ namespace ohm {
                 return data.size();
             CASE(notation::type::Scalar)
                 SWITCH_TYPE(m_var->code)
-                    // TODO: CHECK: using __ref may failed, because memory alignment
-                    CASE_TYPE_INTEGER(return bool(__ref<type>(data)))
-                    CASE_TYPE_FLOOT(return __ref<type>(data) != 0)
-                    CASE_TYPE_BOOL(return __ref<type>(data))
+                    CASE_TYPE_INTEGER(return bool(scalar))
+                    CASE_TYPE_FLOOT(return scalar != 0)
+                    CASE_TYPE_BOOL(return scalar)
                     CASE_TYPE_VOID(return false)
-                    CASE_TYPE_CHAR(return bool(__ref<type>(data)))
-                    CASE_TYPE_POINTER(return bool(__ref<type>(data)))
+                    CASE_TYPE_CHAR(return bool(scalar))
+                    CASE_TYPE_POINTER(return bool(scalar))
                     CASE_TYPE_NOT_SUPPORTED(throw VarOperatorNotSupported(m_var->code, "bool()"))
                 END_TYPE
             UNEXPECTED_END
@@ -682,5 +702,6 @@ namespace ohm {
 #pragma pop_macro("CASE_TYPE_CHAR")
 #pragma pop_macro("CASE_TYPE_VOID")
 #pragma pop_macro("CASE_TYPE_POINTER")
+#pragma pop_macro("CASE_TYPE_ANY")
 
 #endif //OMEGA_VAR_VAR_H
