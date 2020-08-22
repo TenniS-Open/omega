@@ -5,6 +5,7 @@
 #ifndef OMEGA_LOGGER_H
 #define OMEGA_LOGGER_H
 
+#include "loglevel.h"
 #include "print.h"
 #include "macro.h"
 #include "except.h"
@@ -16,15 +17,6 @@
 #endif
 
 namespace ohm {
-    enum LogLevel {
-        LOG_NONE = 0,
-        LOG_DEBUG = 1,
-        LOG_INFO = 2,
-        LOG_WARNING = 3,
-        LOG_ERROR = 4,
-        LOG_FATAL = 5,
-    };
-
     struct CodeLine {
         CodeLine() = default;
         CodeLine(std::string function, std::string code, int line)
@@ -147,10 +139,11 @@ namespace ohm {
         std::string log(LogLevel level, CodeLine line, const Args &...args) const {
             auto &&stream = level >= LOG_ERROR ? std::cerr : std::cout;
             auto tag = m_tag;
-            auto msg = slog(level, tag, line, args...);
+            std::string body = sprint(line, ": ", args...);
+            auto msg = sprint("[", now(), "]", log_string(level), "<", tag, ">", body);
 
             log2console(stream, msg);
-            log2platform(level, msg);
+            log2platform(level, body);
             log2file(msg);
 
             return msg;
@@ -170,7 +163,7 @@ namespace ohm {
 
         void log2platform(LogLevel level, const std::string &msg) const {
 #if OHM_PLATFORM_OS_ANDROID
-            // TODO: write log on android
+            android::log(level, m_tag, msg);
 #endif
         }
 
