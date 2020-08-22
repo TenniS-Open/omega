@@ -10,18 +10,18 @@
 
 namespace ohm {
     namespace notation {
-        using ObjectType = std::map<std::string, TypedField::shared>;
+        using Object = std::map<std::string, Element::shared>;
 
-        using Object = Element<type::Object, ObjectType>;
+        using ElementObject = ElementBase<type::Object, Object>;
 
         template<>
-        struct type_code<ObjectType> {
+        struct type_code<Object> {
             static const DataType code = type::Object;
         };
 
         template<>
         struct code_type<type::Object> {
-            using type = Object;
+            using type = ElementObject;
         };
     }
 }

@@ -10,7 +10,7 @@
 namespace ohm {
     namespace notation {
         template<typename T>
-        using Scalar = Element<type_code<T>::code, T>;
+        using Scalar = ElementBase<type_code<T>::code, T>;
 
 #define __DEFINE_TYPE_CODE(_type, _code) \
         template <> struct type_code<_type> { static const DataType code = type::Scalar | _code; }; \

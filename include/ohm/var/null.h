@@ -9,18 +9,18 @@
 
 namespace ohm {
     namespace notation {
-        class None : public TypedField {
+        class ElementNone : public Element {
         public:
-            using self = None;
-            using supper = TypedField;
+            using self = ElementNone;
+            using supper = Element;
 
-            None() : supper({type::None}) {}
+            ElementNone() : supper({type::None}) {}
 
-            None(std::nullptr_t) : self() {}
+            ElementNone(std::nullptr_t) : self() {}
 
             operator bool() const { return false; }
 
-            static std::shared_ptr<None> Make() {
+            static std::shared_ptr<ElementNone> Make() {
                 return std::make_shared<self>();
             }
         };
@@ -32,7 +32,7 @@ namespace ohm {
 
         template<>
         struct code_type<type::None> {
-            using type = None;
+            using type = ElementNone;
         };
     }
 }

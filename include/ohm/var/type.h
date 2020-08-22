@@ -125,7 +125,7 @@ namespace ohm {
             using type = typename code_type<type_code<T>::code>::type;
         };
 
-        inline std::string __sub_type_string(type::SubType type) {
+        inline std::string sub_type_string(type::SubType type) {
             using namespace type;
             switch (type) {
                 case VOID: return "void";
@@ -167,8 +167,22 @@ namespace ohm {
                 case type::Binary: return "binary";
                 case type::Undefined: return "undefined";
 
-                case type::Scalar: return __sub_type_string(type::SubType(type & 0xFF));
-                case type::Repeat: return "repeat<" + __sub_type_string(type::SubType(type & 0xFF)) + ">";
+                case type::Scalar: return sub_type_string(type::SubType(type & 0xFF));
+                case type::Repeat: return "repeat<" + sub_type_string(type::SubType(type & 0xFF)) + ">";
+            }
+        }
+
+        inline std::string main_type_string(DataType type) {
+            switch (type & 0xFF00) {
+                default: return "unknown";
+                case type::None: return "null";
+                case type::String: return "string";
+                case type::Array: return "array";
+                case type::Object: return "object";
+                case type::Binary: return "binary";
+                case type::Undefined: return "undefined";
+                case type::Scalar: return "scalar";
+                case type::Repeat: return "repeat";
             }
         }
     }

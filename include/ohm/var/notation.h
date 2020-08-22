@@ -15,10 +15,10 @@
 
 namespace ohm {
     namespace notation {
-        class TypedField {
+        class Element {
         public:
-            using shared = std::shared_ptr<TypedField>;
-            using weak = std::weak_ptr<TypedField>;
+            using shared = std::shared_ptr<Element>;
+            using weak = std::weak_ptr<Element>;
 
             DataType code;
 
@@ -33,16 +33,16 @@ namespace ohm {
         };
 
         template<DataType _Type, typename _Element>
-        class Element : public TypedField {
+        class ElementBase : public Element {
         public:
             using Type = _Element;
             _Element data;
 
-            using self = Element;
-            using supper = TypedField;
+            using self = ElementBase;
+            using supper = Element;
 
             template<typename... Args>
-            Element(Args &&...args)
+            ElementBase(Args &&...args)
                     : supper({_Type}), data(std::forward<Args>(args)...) {}
 
             operator _Element() const { return data; }

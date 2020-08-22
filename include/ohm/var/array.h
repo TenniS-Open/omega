@@ -9,18 +9,18 @@
 
 namespace ohm {
     namespace notation {
-        using ArrayType = std::vector<TypedField::shared>;
+        using Array = std::vector<Element::shared>;
 
-        using Array = Element<type::Array, ArrayType>;
+        using ElementArray = ElementBase<type::Array, Array>;
 
         template<>
-        struct type_code<ArrayType> {
+        struct type_code<Array> {
             static const DataType code = type::Array;
         };
 
         template<>
         struct code_type<type::Array> {
-            using type = Array;
+            using type = ElementArray;
         };
     }
 }
