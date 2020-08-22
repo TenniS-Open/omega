@@ -172,7 +172,7 @@ namespace ohm {
                                    const std::string &op,
                                    const std::vector<notation::DataType> &supported) {
             std::ostringstream oss;
-            oss << notation::type_string(type) << " operator " << op << " not supported, excpeting: ";
+            oss << notation::type_string(type) << " operator " << op << " not supported, expecting: ";
             for (size_t i = 0; i < supported.size(); ++i) {
                 if (i) oss << ", ";
                 oss << notation::main_type_string(supported[i]);
@@ -185,6 +185,47 @@ namespace ohm {
                                    const std::string &op) {
             std::ostringstream oss;
             oss << notation::type_string(type) << " operator " << op << " not supported.";
+            return oss.str();
+        }
+    };
+
+    class VarOperatorParameterMismatch : public VarException {
+    public:
+        using self = VarOperatorParameterMismatch;
+        using supper = VarException;
+
+        explicit VarOperatorParameterMismatch(notation::DataType type,
+                                              const std::string &op,
+                                              int param)
+                : supper(Message(type, op, param)) {}
+
+        explicit VarOperatorParameterMismatch(notation::DataType type,
+                                              const std::string &op,
+                                              int param,
+                                              const std::vector<notation::DataType> &supported)
+                : supper(Message(type, op, param, supported)) {}
+
+        static std::string Message(notation::DataType type,
+                                   const std::string &op,
+                                   int param,
+                                   const std::vector<notation::DataType> &supported) {
+            std::ostringstream oss;
+            oss << notation::type_string(type) << " operator " << op
+                << " parameter " << param << " mismatched, expecting: ";
+            for (size_t i = 0; i < supported.size(); ++i) {
+                if (i) oss << ", ";
+                oss << notation::main_type_string(supported[i]);
+            }
+            oss << ".";
+            return oss.str();
+        }
+
+        static std::string Message(notation::DataType type,
+                                   const std::string &op,
+                                   int param) {
+            std::ostringstream oss;
+            oss << notation::type_string(type) << " operator " << op
+                << " parameter " << param << " mismatched.";
             return oss.str();
         }
     };
@@ -239,7 +280,7 @@ namespace ohm {
  * @param op string tell check operator name
  */
 #define CHECK(op) \
-    std::string __check_op = op; \
+    std::string __op = op; \
     bool __checked = false; \
     std::vector<notation::DataType> __checked_type;
 
@@ -278,7 +319,7 @@ namespace ohm {
     } \
     if (!__checked) { \
         throw VarOperatorNotSupported(m_var ? m_var->code : notation::type::Undefined, \
-            __check_op, __checked_type); \
+            __op, __checked_type); \
     }
 /**
  * throw VarNotSupportedException if got this line. it means no return above.
@@ -286,7 +327,7 @@ namespace ohm {
 #define UNEXPECTED_END \
     } \
     throw VarOperatorNotSupported(m_var ? m_var->code : notation::type::Undefined, \
-        __check_op, __checked_type);
+        __op, __checked_type);
 
 /**
  * return expr if case matched but on value return.
@@ -296,7 +337,7 @@ namespace ohm {
     } \
     if (!__checked) { \
         throw VarOperatorNotSupported(m_var ? m_var->code : notation::type::Undefined, \
-            __check_op, __checked_type); \
+            __op, __checked_type); \
     } else { \
         return expr; \
     }
@@ -508,11 +549,53 @@ namespace ohm {
             return Var(value);
         }
 
+        template<typename T>
+        typename std::enable_if<
+                std::is_integral<T>::value &&
+                !std::is_same<int64_t, T>::value,
+                Var>::type
+        operator[](T &t) {
+            return this->operator[](int64_t(t));
+        }
+
+        template<typename T>
+        typename std::enable_if<
+                std::is_integral<T>::value &&
+                !std::is_same<int64_t, T>::value,
+                Var>::type
+        operator[](T &t) const {
+            return this->operator[](int64_t(t));
+        }
+
+        notation::DataType type() {
+            return m_var ? m_var->code : notation::type::Undefined;
+        }
+
         void append(Var var) {
             CHECK("append")
             SWITCH
             CASE(notation::type::Array)
                 data.push_back(var);
+            END
+        }
+
+        void extend(Var var) {
+            CHECK("extend")
+            SWITCH
+            CASE(notation::type::Array)
+                if (var.type() != notation::type::Array) {
+                    throw VarOperatorParameterMismatch(this->type(), __op, 0, {notation::type::Array});
+                }
+                auto &arr = reinterpret_cast<notation::ElementArray *>(m_var.get())->data;
+                data.insert(data.end(), arr.begin(), arr.end());
+            CASE(notation::type::Object)
+                if (var.type() != notation::type::Object) {
+                    throw VarOperatorParameterMismatch(this->type(), __op, 0, {notation::type::Object});
+                }
+                auto &obj = reinterpret_cast<notation::ElementObject *>(m_var.get())->data;
+                for (auto &pair : obj) {
+                    data[pair.first] = pair.second;
+                }
             END
         }
 
@@ -551,6 +634,7 @@ namespace ohm {
                 return data.size();
             CASE(notation::type::Scalar)
                 SWITCH_TYPE(m_var->code)
+                    // TODO: CHECK: using __ref may failed, because memory alignment
                     CASE_TYPE_INTEGER(return bool(__ref<type>(data)))
                     CASE_TYPE_FLOOT(return __ref<type>(data) != 0)
                     CASE_TYPE_BOOL(return __ref<type>(data))
