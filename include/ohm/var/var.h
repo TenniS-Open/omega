@@ -29,11 +29,8 @@ namespace ohm {
     struct is_var_assignable : public std::false_type {
     };
 
-    template<typename T>
-    struct is_var_assignable<T, typename std::enable_if<
-            notation::is_notation_type<typename remove_cr<T>::type>::value &&
-            std::is_constructible<typename notation::type_type<T>::type, T>::value
-    >::type> : public std::true_type {
+    template<typename T, typename=void>
+    struct is_var_convertible : public std::false_type {
     };
 
 //    inline constexpr bool is_var_code_signed()
@@ -190,9 +187,6 @@ namespace ohm {
             return oss.str();
         }
     };
-
-    template <typename T, typename=void>
-    struct is_var_convertible : public std::false_type {};
 
     class VarOperatorParameterMismatch : public VarException {
     public:
@@ -443,12 +437,15 @@ namespace ohm {
         // Var(notation::DataType code) : self(code2object(code)) {}
 
         template<typename T, typename=typename std::enable_if<
-                is_var_assignable<T>::value
-        >::type>
-        Var(T &&t) : self(notation::type_type<T>::type::Make(std::forward<T>(t))) {}
+                is_var_assignable<T>::value>::type>
+        Var(T &&t) {
+            this->operator=(std::forward<T>(t));
+        }
 
         template<typename T>
-        typename std::enable_if<is_var_assignable<T>::value, Var>::type &
+        typename std::enable_if<
+                notation::is_notation_type<typename remove_cr<T>::type>::value &&
+                std::is_constructible<typename notation::type_type<T>::type, T>::value, Var>::type &
         operator=(T &&t) {
             using Element = typename notation::type_type<T>::type;
             // TODO: check if there is need to update new
@@ -597,7 +594,7 @@ namespace ohm {
             return m_var ? m_var->code : notation::type::Undefined;
         }
 
-        template <typename T, typename=typename std::enable_if<
+        template<typename T, typename=typename std::enable_if<
                 std::is_same<T, bool>::value>::type>
         bool cpp() const {
             if (!m_var) return false;
@@ -627,7 +624,7 @@ namespace ohm {
             UNEXPECTED_END
         }
 
-        template <typename T, typename=typename std::enable_if<
+        template<typename T, typename=typename std::enable_if<
                 (std::is_integral<T>::value || std::is_floating_point<T>::value) &&
                 !std::is_same<T, bool>::value>::type>
         T cpp() const {
@@ -653,7 +650,7 @@ namespace ohm {
             UNEXPECTED_END
         }
 
-        template <typename T, typename=typename std::enable_if<
+        template<typename T, typename=typename std::enable_if<
                 std::is_same<T, std::string>::value>::type>
         std::string cpp() const {
             return this->str();
@@ -705,7 +702,7 @@ namespace ohm {
             UNEXPECTED_END
         }
 
-        template <typename T, typename=typename std::enable_if<is_var_convertible<T>::value>::type>
+        template<typename T, typename=typename std::enable_if<is_var_convertible<T>::value>::type>
         operator T() const {
             return cpp<T>();
         }
@@ -760,7 +757,7 @@ namespace ohm {
         }
 
         const void *id() const {
-            return const_cast<self*>(this)->id();
+            return const_cast<self *>(this)->id();
         }
 
         std::string repr() const {
@@ -823,11 +820,20 @@ namespace ohm {
         friend std::string notation::repr(notation::Element::shared element);
     };
 
-    template <typename T>
+    template<typename T>
     struct is_var_convertible<T,
             typename std::enable_if<
-            std::is_same<T, decltype(std::declval<Var>().cpp<T>())>::value
-            >::type> : public std::true_type {};
+                    std::is_same<T, decltype(std::declval<Var>().cpp<T>())>::value
+            >::type> : public std::true_type {
+    };
+
+    template<typename T>
+    struct is_var_assignable<T,
+            typename std::enable_if<
+                    std::is_same<Var&, decltype(std::declval<Var>().operator=(std::declval<T>()))>::value ||
+                    std::is_same<const Var&, decltype(std::declval<Var>().operator=(std::declval<T>()))>::value
+            >::type> : public std::true_type {
+    };
 
     namespace notation {
         inline std::string repr(Element::shared element) {
