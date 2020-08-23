@@ -16,6 +16,8 @@
 #include "../print.h"
 
 #include "notation.h"
+#include "repr.h"
+#include "cast.h"
 
 #include "../type_cast.h"
 
@@ -188,6 +190,9 @@ namespace ohm {
             return oss.str();
         }
     };
+
+    template <typename T, typename=void>
+    struct is_var_convertible : public std::false_type {};
 
     class VarOperatorParameterMismatch : public VarException {
     public:
@@ -588,8 +593,70 @@ namespace ohm {
             return this->operator[](int64_t(t));
         }
 
-        notation::DataType type() {
+        notation::DataType type() const {
             return m_var ? m_var->code : notation::type::Undefined;
+        }
+
+        template <typename T, typename=typename std::enable_if<
+                std::is_same<T, bool>::value>::type>
+        bool cpp() const {
+            if (!m_var) return false;
+
+            CHECK("bool()")
+            SWITCH
+            CASE(notation::type::None)
+                return false;
+            CASE(notation::type::Boolean)
+                return data;
+            CASE(notation::type::String)
+                return !data.empty();
+            CASE(notation::type::Array)
+                return data.size();
+            CASE(notation::type::Object)
+                return data.size();
+            CASE(notation::type::Scalar)
+                SWITCH_TYPE(m_var->code)
+                    CASE_TYPE_INTEGER(return bool(scalar))
+                    CASE_TYPE_FLOOT(return scalar != 0)
+                    CASE_TYPE_BOOL(return scalar)
+                    CASE_TYPE_VOID(return false)
+                    CASE_TYPE_CHAR(return bool(scalar))
+                    CASE_TYPE_POINTER(return bool(scalar))
+                    CASE_TYPE_NOT_SUPPORTED(throw VarOperatorNotSupported(m_var->code, "bool()"))
+                END_TYPE
+            UNEXPECTED_END
+        }
+
+        template <typename T, typename=typename std::enable_if<
+                (std::is_integral<T>::value || std::is_floating_point<T>::value) &&
+                !std::is_same<T, bool>::value>::type>
+        T cpp() const {
+            CHECK(std::string(typeid(T).name()) + "()")
+            SWITCH
+            CASE(notation::type::Boolean)
+                return data ? 1 : 0;
+            CASE(notation::type::String)
+                try {
+                    return notation::string2<T>(data);
+                } catch (const notation::String2Exception &e) {
+                    throw VarException(e.what());
+                }
+            CASE(notation::type::Scalar)
+                SWITCH_TYPE(m_var->code)
+                    CASE_TYPE_INTEGER(return T(scalar))
+                    CASE_TYPE_FLOOT(return T(T(scalar)))
+                    CASE_TYPE_BOOL(return scalar ? 1 : 0)
+                    CASE_TYPE_VOID(return 0)
+                    CASE_TYPE_CHAR(return T(scalar))
+                    DEFAULT_TYPE(throw VarOperatorNotSupported(this->type(), __op))
+                END_TYPE
+            UNEXPECTED_END
+        }
+
+        template <typename T, typename=typename std::enable_if<
+                std::is_same<T, std::string>::value>::type>
+        std::string cpp() const {
+            return this->str();
         }
 
         void append(Var var) {
@@ -638,33 +705,105 @@ namespace ohm {
             UNEXPECTED_END
         }
 
-        operator bool() const {
-            if (!m_var) return false;
-
-            CHECK("bool()")
-            SWITCH
-            CASE(notation::type::None)
-                return false;
-            CASE(notation::type::Boolean)
-                return data;
-            CASE(notation::type::String)
-                return !data.empty();
-            CASE(notation::type::Array)
-                return data.size();
-            CASE(notation::type::Object)
-                return data.size();
-            CASE(notation::type::Scalar)
-                SWITCH_TYPE(m_var->code)
-                    CASE_TYPE_INTEGER(return bool(scalar))
-                    CASE_TYPE_FLOOT(return scalar != 0)
-                    CASE_TYPE_BOOL(return scalar)
-                    CASE_TYPE_VOID(return false)
-                    CASE_TYPE_CHAR(return bool(scalar))
-                    CASE_TYPE_POINTER(return bool(scalar))
-                    CASE_TYPE_NOT_SUPPORTED(throw VarOperatorNotSupported(m_var->code, "bool()"))
-                END_TYPE
-            UNEXPECTED_END
+        template <typename T, typename=typename std::enable_if<is_var_convertible<T>::value>::type>
+        operator T() const {
+            return cpp<T>();
         }
+
+#pragma push_macro("ID_SWITCH")
+#pragma push_macro("ID_DEFAULT")
+#pragma push_macro("ID_CASE")
+#pragma push_macro("ID_END")
+
+#define ID_SWITCH(type) \
+    switch (type & 0xFF00) { \
+    case 0xFF00: \
+    {
+
+#define ID_DEFAULT \
+    } \
+    default: \
+    {
+
+#define ID_CASE(main_type) \
+    } \
+    case main_type: \
+    { \
+        auto &data = __at<typename notation::code_type<main_type>::type>(m_var.get())->data;
+
+
+#define ID_END \
+    } \
+    }
+
+        void *id() {
+            if (!m_var) return nullptr;
+            ID_SWITCH(m_var->code)
+                ID_DEFAULT
+                    return nullptr;
+                ID_CASE(notation::type::None)
+                    return nullptr;
+                ID_CASE(notation::type::Boolean)
+                    return &data;
+                ID_CASE(notation::type::String)
+                    return &data;
+                ID_CASE(notation::type::Array)
+                    return &data;
+                ID_CASE(notation::type::Object)
+                    return &data;
+                ID_CASE(notation::type::Scalar)
+                    SWITCH_TYPE(m_var->code)
+                        CASE_TYPE_ANY(return &scalar);
+                    END_TYPE
+            ID_END
+            return nullptr;
+        }
+
+        const void *id() const {
+            return const_cast<self*>(this)->id();
+        }
+
+        std::string repr() const {
+            if (!m_var) return "\"@undefined\"";
+            ID_SWITCH(m_var->code)
+                ID_DEFAULT
+                    return "\"@undefined\"";
+                ID_CASE(notation::type::None)
+                    return "null";
+                ID_CASE(notation::type::Boolean)
+                    return data ? "true" : "false";
+                ID_CASE(notation::type::String)
+                    return "\"" + data + "\"";
+                ID_CASE(notation::type::Array)
+                    return notation::repr(data);
+                ID_CASE(notation::type::Object)
+                    return notation::repr(data);
+                ID_CASE(notation::type::Scalar)
+                    SWITCH_TYPE(m_var->code)
+                        CASE_TYPE_INTEGER(return notation::repr(scalar))
+                        CASE_TYPE_FLOOT(return notation::repr(scalar))
+                        CASE_TYPE_BOOL(return notation::repr(scalar))
+                        CASE_TYPE_VOID(return notation::repr(m_var->code, nullptr, 0))
+                        CASE_TYPE_CHAR(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
+                        CASE_TYPE_POINTER(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
+                        CASE_TYPE_NOT_SUPPORTED(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
+                    END_TYPE
+            ID_END
+            return nullptr;
+        }
+
+        std::string str() const {
+            if (m_var && (m_var->code & 0xFF00) == notation::type::String) {
+                auto &data = __at<typename notation::code_type<notation::type::String>::type>(m_var.get())->data;
+                return data;
+            }
+            return repr();
+        }
+
+#pragma pop_macro("ID_SWITCH")
+#pragma pop_macro("ID_DEFAULT")
+#pragma pop_macro("ID_CASE")
+#pragma pop_macro("ID_END")
 
     private:
         using Notifier = std::function<void(notation::Element::shared)>;
@@ -680,7 +819,21 @@ namespace ohm {
 
         notation::Element::shared m_var;
         std::function<void(notation::Element::shared)> m_notifier;
+
+        friend std::string notation::repr(notation::Element::shared element);
     };
+
+    template <typename T>
+    struct is_var_convertible<T,
+            typename std::enable_if<
+            std::is_same<T, decltype(std::declval<Var>().cpp<T>())>::value
+            >::type> : public std::true_type {};
+
+    namespace notation {
+        inline std::string repr(Element::shared element) {
+            return Var(element).repr();
+        }
+    }
 }
 
 #pragma pop_macro("CHECK")
