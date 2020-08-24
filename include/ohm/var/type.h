@@ -16,14 +16,14 @@ namespace ohm {
                 None = 0,
                 Scalar = 0x0100,
                 String = 0x0200,
-                Boolean = 0x0400,
-                Array = 0x0500,
-                Object = 0x0600,
+`                Boolean = 0x0300,
+                Array = 0x0400,
+                Object = 0x0500,
 
-                Repeat = 0x0700,
-                Binary = 0x0800,
+                Repeat = 0x0600,
+                Binary = 0x0700,
 
-                Defined = 0x0900,
+                Defined = 0x0800,
 
                 Undefined = 0xFF00,
             };

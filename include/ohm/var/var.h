@@ -445,15 +445,34 @@ namespace ohm {
         template<typename T>
         typename std::enable_if<
                 notation::is_notation_type<typename remove_cr<T>::type>::value &&
-                std::is_constructible<typename notation::type_type<T>::type, T>::value, Var>::type &
+                std::is_constructible<typename notation::type_type<
+                        typename remove_cr<T>::type>::type, T>::value, Var>::type &
         operator=(T &&t) {
-            using Element = typename notation::type_type<T>::type;
+            using Element = typename notation::type_type<typename remove_cr<T>::type>::type;
             // TODO: check if there is need to update new
             m_var = Element::Make(std::forward<T>(t));
             if (m_notifier) {
                 m_notifier(m_var);
             }
             return *this;
+        }
+
+        template <typename T>
+        typename std::enable_if<
+                std::is_same<T, size_t>::value &&
+                !std::is_same<T, uint32_t>::value &&
+                sizeof(T) == 4, Var>::type &
+        operator=(T i) {
+            return this->operator=(uint32_t(i));
+        }
+
+        template <typename T>
+        typename std::enable_if<
+                std::is_same<T, size_t>::value &&
+                !std::is_same<T, uint64_t>::value &&
+                sizeof(T) == 8, Var>::type &
+        operator=(T i) {
+            return this->operator=(uint64_t(i));
         }
 
         Var(const Var &var) : self(var.m_var) {}
@@ -733,6 +752,34 @@ namespace ohm {
     } \
     }
 
+        void unsafe(void **ptr, size_t *size) const {
+#define _UNSAFE_RETURN(a, b) \
+            { *ptr = (a); *size = (b); return; }
+            if (!m_var) {
+                _UNSAFE_RETURN(nullptr, 0)
+            }
+            ID_SWITCH(m_var->code)
+                ID_DEFAULT
+                    _UNSAFE_RETURN(nullptr, 0)
+                ID_CASE(notation::type::None)
+                    _UNSAFE_RETURN(nullptr, 0)
+                ID_CASE(notation::type::Boolean)
+                    _UNSAFE_RETURN(&data, sizeof(data))
+                ID_CASE(notation::type::String)
+                    _UNSAFE_RETURN(&data, sizeof(data))
+                ID_CASE(notation::type::Array)
+                    _UNSAFE_RETURN(&data, sizeof(data))
+                ID_CASE(notation::type::Object)
+                    _UNSAFE_RETURN(&data, sizeof(data))
+                ID_CASE(notation::type::Scalar)
+                    SWITCH_TYPE(m_var->code)
+                        CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, sizeof(scalar)))
+                    END_TYPE
+            ID_END
+            _UNSAFE_RETURN(nullptr, 0)
+#undef _UNSAFE_RETURN
+        }
+
         void *id() {
             if (!m_var) return nullptr;
             ID_SWITCH(m_var->code)
@@ -801,6 +848,10 @@ namespace ohm {
 #pragma pop_macro("ID_DEFAULT")
 #pragma pop_macro("ID_CASE")
 #pragma pop_macro("ID_END")
+
+        static Var From(notation::Element::shared var) {
+            return Var(std::move(var));
+        }
 
     private:
         using Notifier = std::function<void(notation::Element::shared)>;
