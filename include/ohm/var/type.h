@@ -16,7 +16,7 @@ namespace ohm {
                 None = 0,
                 Scalar = 0x0100,
                 String = 0x0200,
-`                Boolean = 0x0300,
+                Boolean = 0x0300,
                 Array = 0x0400,
                 Object = 0x0500,
 

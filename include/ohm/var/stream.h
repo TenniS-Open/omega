@@ -42,8 +42,12 @@ module := <header:header><var>
 The `module.header.var_magic` is `0x19900714`。
  */
 
+#include <exception>
+
 namespace ohm {
     using VarWriter = std::function<size_t(const void *, size_t)>;
+    using VarReader = std::function<size_t(void *, size_t)>;
+
     enum VarFormat {
         VarBinary = 0,
         VarJSON = 1,
@@ -52,6 +56,47 @@ namespace ohm {
     constexpr inline int32_t var_magic() {
         return 0x19900714;
     }
+
+    class VarIOExcpetion : public std::logic_error {
+    public:
+        using self = VarIOExcpetion;
+        using supper = std::logic_error;
+
+        VarIOExcpetion(const std::string &msg) : supper(msg) {}
+
+        VarIOExcpetion(const std::string &ctx, const std::string &msg)
+                : supper(Message(ctx, msg)) {}
+
+        static std::string Message(const std::string &ctx, const std::string &msg) {
+            std::ostringstream oss;
+            oss << "While import " << ctx + ", got exception: " << msg;
+            return oss.str();
+        }
+    };
+
+    class VarIOEndOfStream : public VarIOExcpetion {
+    public:
+        using self = VarIOEndOfStream;
+        using supper = VarIOExcpetion;
+
+        VarIOEndOfStream(const std::string &ctx)
+            : supper(ctx, "Unexpected end of stream.") {}
+    };
+
+    class VarIOUnexpectedType : public VarIOExcpetion {
+    public:
+        using self = VarIOUnexpectedType;
+        using supper = VarIOExcpetion;
+
+        VarIOUnexpectedType(const std::string &ctx, const std::string &expected, notation::DataType got)
+                : supper(ctx, Message(expected, got)) {}
+
+        static std::string Message(const std::string &expected, notation::DataType got) {
+            std::ostringstream oss;
+            oss << "Expecting " << expected << ", but got: " << notation::type_string(got);
+            return oss.str();
+        }
+    };
 }
 
 #endif //OMEGA_VAR_STREAM_H

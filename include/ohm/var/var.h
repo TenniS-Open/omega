@@ -475,6 +475,15 @@ namespace ohm {
             return this->operator=(uint64_t(i));
         }
 
+        Var &operator=(const std::vector<Var> &array) {
+            std::vector<notation::Element::shared> element_array;
+            element_array.reserve(array.size());
+            for (auto &var : array) {
+                element_array.push_back(var.m_var);
+            }
+            return this->operator=(std::move(element_array));
+        }
+
         Var(const Var &var) : self(var.m_var) {}
 
         Var &operator=(const Var &var) {
