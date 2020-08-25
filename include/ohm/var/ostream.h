@@ -75,7 +75,7 @@ namespace ohm {
             var.unsafe(&data, &size);
             size_t writen = 0;
             writen += write_binary_type(var, writer);
-            switch (var.type()) {
+            switch (var.type() & 0xFF00) {
                 case notation::type::Undefined:
                     break;
                 case notation::type::None:

@@ -33,6 +33,23 @@ namespace ohm {
     struct is_var_convertible : public std::false_type {
     };
 
+    template<typename T, typename=void>
+    struct is_var_element : public std::false_type {
+    };
+
+    template<typename T>
+    struct is_var_element<T, typename std::enable_if<
+            notation::is_notation_type<typename remove_cr<T>::type>::value &&
+            std::is_constructible<typename notation::type_type<
+            typename remove_cr<T>::type>::type, T>::value>::type> : public std::true_type {
+    };
+
+//    template <typename T>
+//    struct is_var_element : public std::integral_constant<bool,
+//            notation::is_notation_type<typename remove_cr<T>::type>::value &&
+//            std::is_constructible<typename notation::type_type<
+//                    typename remove_cr<T>::type>::type, T>::value> {};
+
 //    inline constexpr bool is_var_code_signed()
 //
 //    inline constexpr bool is_var_code_convertible(notation::DataType from, notation::DataType to) {
@@ -443,10 +460,7 @@ namespace ohm {
         }
 
         template<typename T>
-        typename std::enable_if<
-                notation::is_notation_type<typename remove_cr<T>::type>::value &&
-                std::is_constructible<typename notation::type_type<
-                        typename remove_cr<T>::type>::type, T>::value, Var>::type &
+        typename std::enable_if<is_var_element<T>::value, Var>::type &
         operator=(T &&t) {
             using Element = typename notation::type_type<typename remove_cr<T>::type>::type;
             // TODO: check if there is need to update new
@@ -459,29 +473,19 @@ namespace ohm {
 
         template <typename T>
         typename std::enable_if<
-                std::is_same<T, size_t>::value &&
-                !std::is_same<T, uint32_t>::value &&
-                sizeof(T) == 4, Var>::type &
+                !is_var_element<T>::value &&
+                std::is_integral<T>::value, Var>::type &
         operator=(T i) {
-            return this->operator=(uint32_t(i));
+            return this->operator=(notation::other_int<T>::type(i));
         }
 
         template <typename T>
         typename std::enable_if<
-                std::is_same<T, size_t>::value &&
-                !std::is_same<T, uint64_t>::value &&
-                sizeof(T) == 8, Var>::type &
-        operator=(T i) {
-            return this->operator=(uint64_t(i));
-        }
-
-        Var &operator=(const std::vector<Var> &array) {
-            std::vector<notation::Element::shared> element_array;
-            element_array.reserve(array.size());
-            for (auto &var : array) {
-                element_array.push_back(var.m_var);
-            }
-            return this->operator=(std::move(element_array));
+                !is_var_element<T>::value &&
+                std::is_constructible<std::string, T>::value
+                , Var>::type &
+        operator=(T &&t) {
+            return this->operator=(std::string(std::forward<T>(t)));
         }
 
         Var(const Var &var) : self(var.m_var) {}
@@ -490,6 +494,11 @@ namespace ohm {
             this->m_var = var.m_var;
             return *this;
         }
+
+//        Var &operator=(Var &&var) {
+//            this->m_var = std::move(var.m_var);
+//            return *this;
+//        }
 
         operator notation::Element::shared() { return m_var; }
 
@@ -835,7 +844,7 @@ namespace ohm {
                     SWITCH_TYPE(m_var->code)
                         CASE_TYPE_INTEGER(return notation::repr(scalar))
                         CASE_TYPE_FLOOT(return notation::repr(scalar))
-                        CASE_TYPE_BOOL(return notation::repr(scalar))
+                        CASE_TYPE_BOOL(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
                         CASE_TYPE_VOID(return notation::repr(m_var->code, nullptr, 0))
                         CASE_TYPE_CHAR(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
                         CASE_TYPE_POINTER(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
@@ -858,8 +867,12 @@ namespace ohm {
 #pragma pop_macro("ID_CASE")
 #pragma pop_macro("ID_END")
 
-        static Var From(notation::Element::shared var) {
-            return Var(std::move(var));
+        static Var From(notation::Element::shared element) {
+            return Var(std::move(element));
+        }
+
+        notation::Element::shared _element() const {
+            return m_var;
         }
 
     private:

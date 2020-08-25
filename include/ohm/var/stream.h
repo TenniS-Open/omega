@@ -16,7 +16,7 @@ scalar{sub} := <byte*type_bytes($sub)>
 string := <var:size><byte*int($size)>
 boolean := <byte>
 array := <var:size><var*int($size)>
-object := <var:size><[<string><var>]*int($size)>
+object := <var:size><[<var:key><var:value>]*int($size)>
 repeat{sub} := <var:size><byte*type_bytes($sub)*int($size)>
 binary := <var:size><byte*int($size)>
 element{code} := switch(code & 0xff00) begin
@@ -94,6 +94,21 @@ namespace ohm {
         static std::string Message(const std::string &expected, notation::DataType got) {
             std::ostringstream oss;
             oss << "Expecting " << expected << ", but got: " << notation::type_string(got);
+            return oss.str();
+        }
+    };
+
+    class VarIOUnrecognizedType : public VarIOExcpetion {
+    public:
+        using self = VarIOUnrecognizedType;
+        using supper = VarIOExcpetion;
+
+        VarIOUnrecognizedType(const std::string &ctx, notation::DataType got)
+                : supper(ctx, Message(got)) {}
+
+        static std::string Message(notation::DataType got) {
+            std::ostringstream oss;
+            oss << "Got unrecognized type: " << got;
             return oss.str();
         }
     };

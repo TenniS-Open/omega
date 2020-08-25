@@ -77,7 +77,42 @@ namespace ohm {
 
 #undef __DEFINE_TYPE_CODE
 
-        struct ElementVoid {
+        struct Void {
+        };
+
+
+        class ElementVoid : public Element {
+        public:
+            using Content = int[0]; // empty data size
+
+            using self = ElementVoid;
+            using supper = Element;
+
+            int data[0];    // there is not content
+
+            ElementVoid() : supper({type::Scalar | type::VOID}) {}
+
+            ElementVoid(Void) : self() {}
+
+            operator bool() const { return false; }
+
+            static std::shared_ptr<ElementVoid> Make() {
+                return std::make_shared<self>();
+            }
+
+            static std::shared_ptr<ElementVoid> Make(Void) {
+                return std::make_shared<self>();
+            }
+        };
+
+        template<>
+        struct type_code<Void> {
+            static const DataType code = type::Scalar | type::VOID;
+        };
+
+        template<>
+        struct code_type<type::Scalar | type::VOID> {
+            using type = ElementVoid;
         };
 
         template<>
@@ -85,11 +120,64 @@ namespace ohm {
             static const DataType code = type::Scalar;
         };
 
-        template<>
-        struct code_type<type::Scalar> {
-            using type = ElementBase<type::Scalar, ElementVoid>;
+        template<typename T, typename=void>
+        struct other_int;
+
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_signed<T>::value && sizeof(T) == 1>::type> {
+            using type = int8_t;
         };
 
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_unsigned<T>::value && sizeof(T) == 1>::type> {
+            using type = uint8_t;
+        };
+
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_signed<T>::value && sizeof(T) == 2>::type> {
+            using type = int16_t;
+        };
+
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_unsigned<T>::value && sizeof(T) == 2>::type> {
+            using type = uint16_t;
+        };
+
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_signed<T>::value && sizeof(T) == 4>::type> {
+            using type = int32_t;
+        };
+
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_unsigned<T>::value && sizeof(T) == 4>::type> {
+            using type = uint32_t;
+        };
+
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_signed<T>::value && sizeof(T) == 8>::type> {
+            using type = int64_t;
+        };
+
+        template<typename T>
+        struct other_int<T, typename std::enable_if<
+                std::is_integral<T>::value &&
+                std::is_unsigned<T>::value && sizeof(T) == 8>::type> {
+            using type = uint64_t;
+        };
     }
 }
 
