@@ -574,20 +574,17 @@ namespace ohm {
                 return Var(value);
             }
         }
-
-        template<typename T>
-        typename std::enable_if<
+        template<typename T, typename=typename std::enable_if<
                 std::is_constructible<std::string, T>::value &&
-                !std::is_same<std::string, typename remove_cr<T>::type>::value,
-                Var>::type operator[](T &&t) {
+                !std::is_same<std::string, typename remove_cr<T>::type>::value>::type>
+        Var operator[](T &&t) {
             return this->operator[](std::string(std::forward<T>(t)));
         }
 
-        template<typename T>
-        typename std::enable_if<
+        template<typename T, typename=typename std::enable_if<
                 std::is_constructible<std::string, T>::value &&
-                !std::is_same<std::string, typename remove_cr<T>::type>::value,
-                Var>::type operator[](T &&t) const {
+                !std::is_same<std::string, typename remove_cr<T>::type>::value>::type>
+        Var operator[](T &&t) const {
             return this->operator[](std::string(std::forward<T>(t)));
         }
 
@@ -633,21 +630,17 @@ namespace ohm {
             return Var(value);
         }
 
-        template<typename T>
-        typename std::enable_if<
+        template<typename T, typename=typename std::enable_if<
                 std::is_integral<T>::value &&
-                !std::is_same<int64_t, T>::value,
-                Var>::type
-        operator[](T &t) {
+                !std::is_same<int64_t, T>::value>::type>
+        Var operator[](T &t) {
             return this->operator[](int64_t(t));
         }
 
-        template<typename T>
-        typename std::enable_if<
+        template<typename T, typename=typename std::enable_if<
                 std::is_integral<T>::value &&
-                !std::is_same<int64_t, T>::value,
-                Var>::type
-        operator[](T &t) const {
+                !std::is_same<int64_t, T>::value>::type>
+        Var operator[](T &t) const {
             return this->operator[](int64_t(t));
         }
 
