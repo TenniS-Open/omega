@@ -85,6 +85,11 @@ namespace ohm {
         struct unknown128 : public placeholder<128> {
         };
 
+        template <typename T>
+        struct remove_cr {
+            using type = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+        };
+
         template<typename T, typename=void>
         struct type_code {
         };

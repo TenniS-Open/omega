@@ -7,6 +7,8 @@
 
 #include "array.h"
 #include "object.h"
+
+#include <sstream>
 #include <iomanip>
 
 namespace ohm {

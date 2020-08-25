@@ -13,13 +13,10 @@
 #include "./string.h"
 #include "array.h"
 #include "object.h"
-#include "../print.h"
 
 #include "notation.h"
 #include "repr.h"
 #include "cast.h"
-
-#include "../type_cast.h"
 
 #include <type_traits>
 #include <sstream>
@@ -39,9 +36,9 @@ namespace ohm {
 
     template<typename T>
     struct is_var_element<T, typename std::enable_if<
-            notation::is_notation_type<typename remove_cr<T>::type>::value &&
+            notation::is_notation_type<typename notation::remove_cr<T>::type>::value &&
             std::is_constructible<typename notation::type_type<
-            typename remove_cr<T>::type>::type, T>::value>::type> : public std::true_type {
+            typename notation::remove_cr<T>::type>::type, T>::value>::type> : public std::true_type {
     };
 
 //    template <typename T>
@@ -485,7 +482,7 @@ namespace ohm {
         template<typename T>
         typename std::enable_if<is_var_element<T>::value, Var>::type &
         operator=(T &&t) {
-            using Element = typename notation::type_type<typename remove_cr<T>::type>::type;
+            using Element = typename notation::type_type<typename notation::remove_cr<T>::type>::type;
             // TODO: check if there is need to update new
             m_var = Element::Make(std::forward<T>(t));
             if (m_notifier) {
@@ -576,14 +573,14 @@ namespace ohm {
         }
         template<typename T, typename=typename std::enable_if<
                 std::is_constructible<std::string, T>::value &&
-                !std::is_same<std::string, typename remove_cr<T>::type>::value>::type>
+                !std::is_same<std::string, typename notation::remove_cr<T>::type>::value>::type>
         Var operator[](T &&t) {
             return this->operator[](std::string(std::forward<T>(t)));
         }
 
         template<typename T, typename=typename std::enable_if<
                 std::is_constructible<std::string, T>::value &&
-                !std::is_same<std::string, typename remove_cr<T>::type>::value>::type>
+                !std::is_same<std::string, typename notation::remove_cr<T>::type>::value>::type>
         Var operator[](T &&t) const {
             return this->operator[](std::string(std::forward<T>(t)));
         }
