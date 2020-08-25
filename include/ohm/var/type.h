@@ -197,6 +197,20 @@ namespace ohm {
                 case type::Repeat: return "repeat";
             }
         }
+
+		struct Empty {};	// for empty data, well it will use 1 byte, but represent zero size;
+
+		template <typename T>
+		struct __element_size { static constexpr size_t value = sizeof(T); };
+
+		template <>
+		struct __element_size<Empty> { static constexpr size_t value = 0; };
+
+		template <typename T>
+		inline constexpr size_t element_size(const T &) { return __element_size<T>::value; }
+
+		template <typename T>
+		inline constexpr size_t element_size() { return __element_size<T>::value; }
     }
 }
 

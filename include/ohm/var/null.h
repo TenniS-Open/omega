@@ -14,7 +14,7 @@ namespace ohm {
             using self = ElementNone;
             using supper = Element;
 
-            int data[0];    // for
+			Empty data;    // for empty data size.
 
             ElementNone() : supper({type::None}) {}
 

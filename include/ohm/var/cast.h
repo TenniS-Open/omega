@@ -40,10 +40,11 @@ namespace ohm {
             const char *number_c_string = str.c_str();
             char *end_ptr = nullptr;
             auto value = std::strtoll(number_c_string, &end_ptr, 10);
+			using K = decltype(value);
             if (*end_ptr != '\0') {
                 throw String2NotConvertible("Can not convert \"" + str + "\" to integer.");
             }
-            if (value > std::numeric_limits<T>::max() || value < std::numeric_limits<T>::min()) {
+            if (value > K(std::numeric_limits<T>::max()) || value < K(std::numeric_limits<T>::min())) {
                 throw String2OutOfLimits("Converted \"" + str + "\" out of limits.");
             }
             return T(value);

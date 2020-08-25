@@ -445,6 +445,32 @@ namespace ohm {
     CASE_TYPE(notation::type::VOID) codes; \
     CASE_TYPE(notation::type::PTR) codes;
 
+#define CASE_TYPE_NONVOID(codes) \
+    CASE_TYPE(notation::type::INT8) codes; \
+    CASE_TYPE(notation::type::UINT8) codes; \
+    CASE_TYPE(notation::type::INT16) codes; \
+    CASE_TYPE(notation::type::UINT16) codes; \
+    CASE_TYPE(notation::type::INT32) codes; \
+    CASE_TYPE(notation::type::UINT32) codes; \
+    CASE_TYPE(notation::type::INT64) codes; \
+    CASE_TYPE(notation::type::UINT64) codes; \
+    CASE_TYPE(notation::type::FLOAT32) codes; \
+    CASE_TYPE(notation::type::FLOAT64) codes; \
+    CASE_TYPE(notation::type::BOOLEAN) codes; \
+    CASE_TYPE(notation::type::FLOAT16) codes; \
+    CASE_TYPE(notation::type::UNKNOWN8) codes; \
+    CASE_TYPE(notation::type::UNKNOWN16) codes; \
+    CASE_TYPE(notation::type::UNKNOWN32) codes; \
+    CASE_TYPE(notation::type::UNKNOWN64) codes; \
+    CASE_TYPE(notation::type::UNKNOWN128) codes; \
+    CASE_TYPE(notation::type::COMPLEX32) codes; \
+    CASE_TYPE(notation::type::COMPLEX64) codes; \
+    CASE_TYPE(notation::type::COMPLEX128) codes; \
+    CASE_TYPE(notation::type::CHAR8) codes; \
+    CASE_TYPE(notation::type::CHAR16) codes; \
+    CASE_TYPE(notation::type::CHAR32) codes; \
+    CASE_TYPE(notation::type::PTR) codes;
+
     class Var {
     public:
         using self = Var;
@@ -780,16 +806,16 @@ namespace ohm {
                 ID_CASE(notation::type::None)
                     _UNSAFE_RETURN(nullptr, 0)
                 ID_CASE(notation::type::Boolean)
-                    _UNSAFE_RETURN(&data, sizeof(data))
+                    _UNSAFE_RETURN(&data, notation::element_size(data))
                 ID_CASE(notation::type::String)
-                    _UNSAFE_RETURN(&data, sizeof(data))
+                    _UNSAFE_RETURN(&data, notation::element_size(data))
                 ID_CASE(notation::type::Array)
-                    _UNSAFE_RETURN(&data, sizeof(data))
+                    _UNSAFE_RETURN(&data, notation::element_size(data))
                 ID_CASE(notation::type::Object)
-                    _UNSAFE_RETURN(&data, sizeof(data))
+                    _UNSAFE_RETURN(&data, notation::element_size(data))
                 ID_CASE(notation::type::Scalar)
                     SWITCH_TYPE(m_var->code)
-                        CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, sizeof(scalar)))
+                        CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, notation::element_size(scalar)))
                     END_TYPE
             ID_END
             _UNSAFE_RETURN(nullptr, 0)
@@ -842,11 +868,11 @@ namespace ohm {
                     SWITCH_TYPE(m_var->code)
                         CASE_TYPE_INTEGER(return notation::repr(scalar))
                         CASE_TYPE_FLOOT(return notation::repr(scalar))
-                        CASE_TYPE_BOOL(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
+                        CASE_TYPE_BOOL(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
                         CASE_TYPE_VOID(return notation::repr(m_var->code, nullptr, 0))
-                        CASE_TYPE_CHAR(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
-                        CASE_TYPE_POINTER(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
-                        CASE_TYPE_NOT_SUPPORTED(return notation::repr(m_var->code, &scalar, sizeof(scalar)))
+                        CASE_TYPE_CHAR(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
+                        CASE_TYPE_POINTER(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
+                        CASE_TYPE_NOT_SUPPORTED(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
                     END_TYPE
             ID_END
             return nullptr;

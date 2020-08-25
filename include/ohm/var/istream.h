@@ -87,8 +87,9 @@ namespace ohm {
         template <typename T>
         inline T read(Context &ctx, const VarReader &reader) {
             T tmp;
-            auto read = reader(&tmp, sizeof(tmp));
-            if (read != sizeof(tmp)) {
+			constexpr auto size = notation::element_size<T>();
+            auto read = reader(&tmp, size);
+            if (read != size) {
                 throw VarIOEndOfStream(ctx);
             }
             return tmp;
@@ -100,7 +101,7 @@ namespace ohm {
 
         template <typename T>
         inline T *read_buffer(Context &ctx, T *data, size_t wanted, const VarReader &reader) {
-            auto size = sizeof(T) * wanted;
+            auto size = notation::element_size<T>() * wanted;
             auto read = reader(data, size);
             if (read != size) {
                 throw VarIOEndOfStream(ctx);
