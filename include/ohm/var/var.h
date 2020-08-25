@@ -479,6 +479,20 @@ namespace ohm {
         template <typename T, typename>
         Var(T &&t);
 
+        Var &operator=(const Var &var) {
+            m_var = var.m_var;
+            if (m_notifier) {
+                m_notifier(m_var);
+            }
+            return *this;
+        }
+
+        Var &operator=(Var &&var) {
+            this->m_var = std::move(var.m_var);
+            this->m_notifier = std::move(var.m_notifier);
+            return *this;
+        }
+
         template<typename T>
         typename std::enable_if<is_var_element<T>::value, Var>::type &
         operator=(T &&t) {
@@ -494,14 +508,16 @@ namespace ohm {
         template <typename T>
         typename std::enable_if<
                 !is_var_element<T>::value &&
+                !std::is_same<Var, typename notation::remove_cr<T>::type>::value &&
                 std::is_integral<T>::value, Var>::type &
         operator=(T i) {
-            return this->operator=(notation::other_int<T>::type(i));
+            return this->operator=(typename notation::other_int<T>::type(i));
         }
 
         template <typename T>
         typename std::enable_if<
                 !is_var_element<T>::value &&
+                !std::is_same<Var, typename notation::remove_cr<T>::type>::value &&
                 std::is_constructible<std::string, T>::value
                 , Var>::type &
         operator=(T &&t) {
@@ -509,17 +525,6 @@ namespace ohm {
         }
 
         Var(const Var &var) : self(var.m_var) {}
-
-        Var &operator=(const Var &var) {
-            this->m_var = var.m_var;
-            return *this;
-        }
-
-        Var &operator=(Var &&var) {
-            this->m_var = std::move(var.m_var);
-            this->m_notifier = std::move(var.m_notifier);
-            return *this;
-        }
 
         operator notation::Element::shared() { return m_var; }
 
