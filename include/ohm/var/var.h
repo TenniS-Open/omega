@@ -453,11 +453,8 @@ namespace ohm {
 
         // Var(notation::DataType code) : self(code2object(code)) {}
 
-        template<typename T, typename=typename std::enable_if<
-                is_var_assignable<T>::value>::type>
-        Var(T &&t) {
-            this->operator=(std::forward<T>(t));
-        }
+        template <typename T, typename>
+        Var(T &&t);
 
         template<typename T>
         typename std::enable_if<is_var_element<T>::value, Var>::type &
@@ -495,10 +492,11 @@ namespace ohm {
             return *this;
         }
 
-//        Var &operator=(Var &&var) {
-//            this->m_var = std::move(var.m_var);
-//            return *this;
-//        }
+        Var &operator=(Var &&var) {
+            this->m_var = std::move(var.m_var);
+            this->m_notifier = std::move(var.m_notifier);
+            return *this;
+        }
 
         operator notation::Element::shared() { return m_var; }
 
@@ -907,6 +905,12 @@ namespace ohm {
                     std::is_same<const Var&, decltype(std::declval<Var>().operator=(std::declval<T>()))>::value
             >::type> : public std::true_type {
     };
+
+    template<typename T, typename=typename std::enable_if<
+            is_var_assignable<T>::value>::type>
+    Var::Var(T &&t) {
+        this->operator=(std::forward<T>(t));
+    }
 
     namespace notation {
         inline std::string repr(Element::shared element) {

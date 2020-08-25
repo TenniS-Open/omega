@@ -135,8 +135,7 @@ namespace ohm {
             auto size = expect<size_t>(ctx, "integer", read_var(ctx, reader));
             std::vector<char> buffer(size);
             read_buffer(ctx, buffer.data(), size, reader);
-            auto body = std::string(buffer.data());
-            return Var(body);
+            return Var(std::string(buffer.data()));
         }
 
         inline Var read_array(Context &ctx, const VarReader &reader) {
