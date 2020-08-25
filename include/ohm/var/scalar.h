@@ -33,9 +33,7 @@ namespace ohm {
 
             Boolean(const Boolean &) = default;
 
-            template<typename T, typename=typename std::enable_if<
-                    std::is_integral<T>::value || std::is_same<T, bool>::value>::type>
-            operator T() const { return T(data); }
+            operator bool() const { return data != 0; }
         };
 
         namespace {
@@ -83,16 +81,18 @@ namespace ohm {
 
         class ElementVoid : public Element {
         public:
-            using Content = int[0]; // empty data size
+            using Content = Empty; // empty data size
 
             using self = ElementVoid;
             using supper = Element;
 
-            int data[0];    // there is not content
+			Empty data;
 
             ElementVoid() : supper({type::Scalar | type::VOID}) {}
 
             ElementVoid(Void) : self() {}
+
+            ElementVoid(Empty) : self() {}
 
             operator bool() const { return false; }
 
@@ -103,10 +103,19 @@ namespace ohm {
             static std::shared_ptr<ElementVoid> Make(Void) {
                 return std::make_shared<self>();
             }
+
+            static std::shared_ptr<ElementVoid> Make(Empty) {
+                return std::make_shared<self>();
+            }
         };
 
         template<>
         struct type_code<Void> {
+            static const DataType code = type::Scalar | type::VOID;
+        };
+
+        template<>
+        struct type_code<Empty> {
             static const DataType code = type::Scalar | type::VOID;
         };
 

@@ -5,6 +5,8 @@
 #ifndef OMEGA_NEED_H
 #define OMEGA_NEED_H
 
+#include <memory>
+
 #include "void_bind.h"
 #include "type_callable.h"
 #include "except.h"

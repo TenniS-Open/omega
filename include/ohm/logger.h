@@ -5,6 +5,8 @@
 #ifndef OMEGA_LOGGER_H
 #define OMEGA_LOGGER_H
 
+#include <algorithm>
+
 #include "loglevel.h"
 #include "print.h"
 #include "macro.h"
