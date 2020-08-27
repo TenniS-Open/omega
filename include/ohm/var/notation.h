@@ -36,7 +36,7 @@ namespace ohm {
 
             bool is_object() const { return (code & 0xFF00) == type::Object; }
 
-            bool is_repeat() const { return (code & 0xFF00) == type::Repeat; }
+            bool is_repeat() const { return (code & 0xFF00) == type::Vector; }
 
             bool is_binary() const { return (code & 0xFF00) == type::Binary; }
 

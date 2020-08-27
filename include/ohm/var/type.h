@@ -20,7 +20,7 @@ namespace ohm {
                 Array = 0x0400,
                 Object = 0x0500,
 
-                Repeat = 0x0600,
+                Vector = 0x0600,
                 Binary = 0x0700,
 
                 Defined = 0x0800,
@@ -184,7 +184,7 @@ namespace ohm {
                 case type::Undefined: return "undefined";
 
                 case type::Scalar: return sub_type_string(type::SubType(type & 0xFF));
-                case type::Repeat: return "repeat<" + sub_type_string(type::SubType(type & 0xFF)) + ">";
+                case type::Vector: return "repeat<" + sub_type_string(type::SubType(type & 0xFF)) + ">";
             }
         }
 
@@ -199,7 +199,7 @@ namespace ohm {
                 case type::Binary: return "binary";
                 case type::Undefined: return "undefined";
                 case type::Scalar: return "scalar";
-                case type::Repeat: return "repeat";
+                case type::Vector: return "repeat";
             }
         }
 

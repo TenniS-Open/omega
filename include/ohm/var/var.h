@@ -76,9 +76,9 @@ namespace ohm {
                 return code_type<type::String>::type::Make();
             case type::Undefined:
                 return nullptr;
-
-//            case type::Scalar: return code_type<type::Scalar>::type::Make();
-//            case type::Repeat: return code_type<type::Repeat>::type::Make();
+            case type::Scalar:
+                return code_type<type::Scalar>::type::Make();
+//            case type::Vector: return code_type<type::Repeat>::type::Make();
         }
     }
 
