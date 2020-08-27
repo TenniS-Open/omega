@@ -75,7 +75,7 @@ namespace ohm {
             case type::Binary:
                 return code_type<type::String>::type::Make();
             case type::Undefined:
-                return code_type<type::String>::type::Make();
+                return nullptr;
 
 //            case type::Scalar: return code_type<type::Scalar>::type::Make();
 //            case type::Repeat: return code_type<type::Repeat>::type::Make();
@@ -366,7 +366,7 @@ namespace ohm {
     } \
     case sub_type: { \
         using type = notation::code_type<sub_type>::type; \
-        auto &scalar = __at<notation::code_type<notation::type::Scalar | sub_type>::type>(m_var.get())->data; \
+        auto &scalar = data.ref<type>(); \
         (void)(scalar);
 
 #define DEFAULT_TYPE(codes) \
@@ -480,6 +480,10 @@ namespace ohm {
         template <typename T, typename>
         Var(T &&t);
 
+        explicit Var(void *ptr) {
+            this->operator=(notation::Scalar(ptr));
+        }
+
         Var &operator=(const Var &var) {
             m_var = var.m_var;
             if (m_notifier) {
@@ -495,7 +499,9 @@ namespace ohm {
         }
 
         template<typename T>
-        typename std::enable_if<is_var_element<T>::value, Var>::type &
+        typename std::enable_if<
+                is_var_element<T>::value && !std::is_pointer<T>::value
+                , Var>::type &
         operator=(T &&t) {
             using Element = typename notation::type_type<typename notation::remove_cr<T>::type>::type;
             // TODO: check if there is need to update new
@@ -672,7 +678,7 @@ namespace ohm {
                 SWITCH_TYPE(m_var->code)
                     CASE_TYPE_INTEGER(return bool(scalar))
                     CASE_TYPE_FLOOT(return scalar != 0)
-                    CASE_TYPE_BOOL(return scalar)
+                    CASE_TYPE_BOOL(return scalar.data)
                     CASE_TYPE_VOID(return false)
                     CASE_TYPE_CHAR(return bool(scalar))
                     CASE_TYPE_POINTER(return bool(scalar))
@@ -699,7 +705,7 @@ namespace ohm {
                 SWITCH_TYPE(m_var->code)
                     CASE_TYPE_INTEGER(return T(scalar))
                     CASE_TYPE_FLOOT(return T(T(scalar)))
-                    CASE_TYPE_BOOL(return scalar ? 1 : 0)
+                    CASE_TYPE_BOOL(return scalar.data ? 1 : 0)
                     CASE_TYPE_VOID(return 0)
                     CASE_TYPE_CHAR(return T(scalar))
                     DEFAULT_TYPE(throw VarOperatorNotSupported(this->type(), __op))

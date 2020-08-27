@@ -53,7 +53,7 @@ namespace ohm {
 
         inline std::string repr(DataType code, const void *data, size_t size) {
             std::ostringstream oss;
-            oss << "@" << type_string(code);
+            oss << "\"@" << type_string(code);
             if (data && size > 0) {
                 auto uint8_data = reinterpret_cast<const uint8_t *>(data);
                 oss << "@0x";
@@ -62,6 +62,7 @@ namespace ohm {
                     oss << uint8_data[i];
                 }
             }
+            oss << "\"";
             return oss.str();
         }
     }

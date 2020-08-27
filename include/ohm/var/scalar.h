@@ -9,41 +9,107 @@
 
 namespace ohm {
     namespace notation {
-        template<typename T>
-        using Scalar = ElementBase<type_code<T>::code, T>;
-
-        /**
-         * Use Boolean because binary define must has 1 byte.
-         * Spicelly in std::vector<Boolean>
-         */
-        struct Boolean {
+        class Scalar {
         public:
-            using Type = uint8_t;
-            Type data;
+            char data[16];
 
-            using self = Boolean;
-
-            Boolean() : data(0) {}
-
-            Boolean(bool b) : data(b ? 1 : 0) {}
+            Scalar() { std::memset(data, 0, sizeof(data)); }
 
             template<typename T, typename=typename std::enable_if<
-                    std::is_integral<T>::value || std::is_floating_point<T>::value>::type>
-            Boolean(T b) : data(Type(b)) {}
+                    std::is_literal_type<T>::value &&
+                    sizeof(T) <= 16>::type>
+            Scalar(T t) { *reinterpret_cast<T *>(data) = t; }
 
-            Boolean(const Boolean &) = default;
+            template<typename T, typename=typename std::enable_if<
+                    std::is_literal_type<T>::value &&
+                    sizeof(T) <= 16>::type>
+            Scalar &operator=(T t) { *reinterpret_cast<T *>(data) = t; return *this; }
 
-            operator bool() const { return data != 0; }
+            template<typename T, typename=typename std::enable_if<
+                    std::is_literal_type<T>::value &&
+                    sizeof(T) <= 16>::type>
+            operator T() const { return *reinterpret_cast<const T *>(data); }
+
+            template <typename T>
+            T *at() { return reinterpret_cast<T*>(data); }
+
+            template <typename T>
+            const T *at() const { return reinterpret_cast<const T*>(data); }
+
+            template <typename T>
+            T &ref() { return *reinterpret_cast<T*>(data); }
+
+            template <typename T>
+            const T &at() const { return *reinterpret_cast<T*>(data); }
         };
 
-        namespace {
-            Boolean TRUE = Boolean(1);
-            Boolean FALSE = Boolean(0);
+        namespace scalar {
+            /**
+             * Use Boolean because binary define must has 1 byte.
+             * Spicelly in std::vector<Boolean>
+             */
+            struct Boolean {
+            public:
+                using Type = uint8_t;
+                Type data;
+            };
         }
+
+        namespace {
+            scalar::Boolean TRUE = {1};
+            scalar::Boolean FALSE = {0};
+        }
+
+        class ElementScalar : public Element {
+        public:
+            using self = ElementScalar;
+            using supper = Element;
+
+            Scalar data;
+
+            ElementScalar() : supper({type::Scalar}) {}
+
+            template<typename T>
+            ElementScalar(T t) : supper({type_code<T>::code}), data(t) {}
+
+            template<typename T>
+            ElementScalar &operator=(T t) {
+                static constexpr auto new_code = type_code<T>::code;
+                code = new_code;
+                data = t;
+                return *this;
+            }
+
+            template<typename T>
+            operator T() const { return *reinterpret_cast<T *>(data); }
+
+            static std::shared_ptr<ElementScalar> Make() {
+                return std::make_shared<self>();
+            }
+
+            template<typename T>
+            static std::shared_ptr<ElementScalar> Make(T t) {
+                return std::make_shared<self>(t);
+            }
+        };
+
+        template<typename T>
+        class ScalarBase : public ElementScalar {
+        public:
+            using self = ScalarBase;
+            using supper = ElementScalar;
+
+            using Content = T;
+
+            ScalarBase() : supper() {}
+
+            template<typename S>
+            ScalarBase(S s) : supper(s) {}
+        };
 
 #define __DEFINE_TYPE_CODE(_type, _code) \
         template <> struct type_code<_type> { static const DataType code = type::Scalar | _code; }; \
-        template <> struct code_type<type::Scalar | _code> { using type = Scalar<_type>; }; \
+        template <> struct code_type<type::Scalar | _code> { using type = ElementScalar; }; \
         template <> struct code_type<_code> { using type = _type; };
 
         __DEFINE_TYPE_CODE(int8_t, type::INT8)
@@ -54,7 +120,7 @@ namespace ohm {
         __DEFINE_TYPE_CODE(uint32_t, type::UINT32)
         __DEFINE_TYPE_CODE(int64_t, type::INT64)
         __DEFINE_TYPE_CODE(uint64_t, type::UINT64)
-        __DEFINE_TYPE_CODE(Boolean, type::BOOLEAN)
+        __DEFINE_TYPE_CODE(scalar::Boolean, type::BOOLEAN)
         __DEFINE_TYPE_CODE(float, type::FLOAT32)
         __DEFINE_TYPE_CODE(double, type::FLOAT64)
         __DEFINE_TYPE_CODE(char, type::CHAR8)
@@ -75,42 +141,13 @@ namespace ohm {
 
 #undef __DEFINE_TYPE_CODE
 
-        struct Void {
-        };
-
-
-        class ElementVoid : public Element {
-        public:
-            using Content = Empty; // empty data size
-
-            using self = ElementVoid;
-            using supper = Element;
-
-			Empty data;
-
-            ElementVoid() : supper({type::Scalar | type::VOID}) {}
-
-            ElementVoid(Void) : self() {}
-
-            ElementVoid(Empty) : self() {}
-
-            operator bool() const { return false; }
-
-            static std::shared_ptr<ElementVoid> Make() {
-                return std::make_shared<self>();
-            }
-
-            static std::shared_ptr<ElementVoid> Make(Void) {
-                return std::make_shared<self>();
-            }
-
-            static std::shared_ptr<ElementVoid> Make(Empty) {
-                return std::make_shared<self>();
-            }
-        };
+        namespace scalar {
+            struct Void {
+            };
+        }
 
         template<>
-        struct type_code<Void> {
+        struct type_code<scalar::Void> {
             static const DataType code = type::Scalar | type::VOID;
         };
 
@@ -121,7 +158,7 @@ namespace ohm {
 
         template<>
         struct code_type<type::Scalar | type::VOID> {
-            using type = ElementVoid;
+            using type = ScalarBase<Empty>;
         };
 
         template<>

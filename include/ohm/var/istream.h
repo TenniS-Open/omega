@@ -104,11 +104,11 @@ namespace ohm {
 #pragma push_macro("READ_TYPE")
 #define READ_TYPE(__type) \
         case __type: \
-            return read<notation::code_type<notation::type::Scalar | __type>::type::Content>(ctx, reader);
+            return Var(read<notation::code_type<__type>::type>(ctx, reader));
 
             using namespace notation::type;
             switch (type & 0xff) {
-                case VOID: return notation::Void();
+                case VOID: return notation::scalar::Void();
                 READ_TYPE(INT8)
                 READ_TYPE(UINT8)
                 READ_TYPE(INT16)
@@ -134,7 +134,7 @@ namespace ohm {
                 READ_TYPE(COMPLEX64)
                 READ_TYPE(COMPLEX128)
             }
-            return notation::Void();
+            return notation::scalar::Void();
 #pragma pop_macro("READ_TYPE")
         }
 
