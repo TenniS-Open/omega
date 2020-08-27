@@ -13,6 +13,7 @@
 #include "./string.h"
 #include "array.h"
 #include "object.h"
+#include "binary.h"
 
 #include "notation.h"
 #include "repr.h"
@@ -712,6 +713,16 @@ namespace ohm {
             return this->str();
         }
 
+        template<typename T, typename=typename std::enable_if<
+                std::is_same<T, notation::Binary>::value>::type>
+        notation::Binary cpp() const {
+            CHECK("binary()")
+            SWITCH
+            CASE(notation::type::Binary)
+                return data;
+            UNEXPECTED_END
+        }
+
         void append(Var var) {
             CHECK("append")
             SWITCH
@@ -745,6 +756,8 @@ namespace ohm {
             SWITCH
             CASE(notation::type::Array)
                 data.resize(size);
+            CASE(notation::type::Binary)
+                data.resize(size);
             END
         }
 
@@ -754,6 +767,8 @@ namespace ohm {
             CASE(notation::type::Array)
                 return data.size();
             CASE(notation::type::Object)
+                return data.size();
+            CASE(notation::type::Binary)
                 return data.size();
             UNEXPECTED_END
         }
@@ -808,6 +823,8 @@ namespace ohm {
                     _UNSAFE_RETURN(&data, notation::element_size(data))
                 ID_CASE(notation::type::Object)
                     _UNSAFE_RETURN(&data, notation::element_size(data))
+                ID_CASE(notation::type::Binary)
+                    _UNSAFE_RETURN(&data, notation::element_size(data))
                 ID_CASE(notation::type::Scalar)
                     SWITCH_TYPE(m_var->code)
                         CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, notation::element_size(scalar)))
@@ -831,6 +848,8 @@ namespace ohm {
                 ID_CASE(notation::type::Array)
                     return &data;
                 ID_CASE(notation::type::Object)
+                    return &data;
+                ID_CASE(notation::type::Binary)
                     return &data;
                 ID_CASE(notation::type::Scalar)
                     SWITCH_TYPE(m_var->code)
@@ -937,6 +956,10 @@ namespace ohm {
         inline std::string repr(Element::shared element) {
             return Var(element).repr();
         }
+    }
+
+    std::ostream &operator<<(std::ostream &out, const Var &var) {
+        return out << var.str();
     }
 }
 

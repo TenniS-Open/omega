@@ -7,6 +7,7 @@
 
 #include "var.h"
 #include "context.h"
+#include "stream.h"
 
 namespace ohm {
     namespace json {
