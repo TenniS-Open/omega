@@ -7,6 +7,7 @@
 
 #include "var.h"
 #include "stream.h"
+#include <fstream>
 
 #include <string>
 #include <functional>
@@ -105,19 +106,35 @@ namespace ohm {
         }
     }
 
-    size_t write(const Var &var, const VarWriter &writer, VarFormat format = VarBinary, bool write_magic = false) {
-        size_t writen = 0;
-        if (format == VarBinary) {
-            if (write_magic) {
-                uint32_t fake = 0;
-                uint32_t magic = var_magic();
-                writen += vario::write_var_body(fake, writer);
-                writen += vario::write_var_body(magic, writer);
+    namespace var {
+        size_t write(const Var &var, const VarWriter &writer, VarFormat format = VarBinary, bool write_magic = false) {
+            size_t writen = 0;
+            if (format == VarBinary) {
+                if (write_magic) {
+                    uint32_t fake = 0;
+                    uint32_t magic = var_magic();
+                    writen += vario::write_var_body(fake, writer);
+                    writen += vario::write_var_body(magic, writer);
+                }
+                writen += vario::write_var(var, writer);
+                return writen;
+            } else {
+                return vario::write_json(var, writer);
             }
-            writen += vario::write_var(var, writer);
-            return writen;
-        } else {
-            return vario::write_json(var, writer);
+        }
+
+        inline size_t writef(const Var &var, const VarWriter &writer, VarFormat format=VarBinary) {
+            return write(var, writer, format, true);
+        }
+
+        inline size_t writef(const Var &var, const std::string &filename, VarFormat format=VarBinary) {
+            std::ofstream f(filename, std::ios::binary);
+            auto writer = [&](const void *data, size_t size) -> size_t {
+                if (!f.is_open()) return false;
+                f.write(reinterpret_cast<const char *>(data), size);
+                return size;
+            };
+            return writef(var, writer, format);
         }
     }
 }
