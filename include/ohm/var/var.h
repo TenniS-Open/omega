@@ -14,6 +14,7 @@
 #include "array.h"
 #include "object.h"
 #include "binary.h"
+#include "vector.h"
 
 #include "notation.h"
 #include "repr.h"
@@ -367,7 +368,9 @@ namespace ohm {
     case sub_type: { \
         using type = notation::code_type<sub_type>::type; \
         auto &scalar = data.ref<type>(); \
-        (void)(scalar);
+        (void)(scalar); \
+        auto vector = data.at<type>(); \
+        (void)(vector);
 
 #define DEFAULT_TYPE(codes) \
     } \
@@ -894,6 +897,12 @@ namespace ohm {
                         CASE_TYPE_POINTER(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
                         CASE_TYPE_NOT_SUPPORTED(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
                     END_TYPE
+                ID_CASE(notation::type::Binary)
+                    return notation::repr(data);
+                ID_CASE(notation::type::Vector)
+                    SWITCH_TYPE(m_var->code)
+                        CASE_TYPE_ANY(return notation::repr(vector, data.capacity() / sizeof(type)))
+                    END_TYPE
             ID_END
             return nullptr;
         }
@@ -964,9 +973,16 @@ namespace ohm {
         }
     }
 
-    std::ostream &operator<<(std::ostream &out, const Var &var) {
+    inline std::ostream &operator<<(std::ostream &out, const Var &var) {
         return out << var.str();
     }
+
+    template <typename T, typename=typename std::enable_if<is_var_element<T>::value>::type>
+    inline Var var_cast(const Var &var) {
+        throw VarException("Cast only support scalar, vector, and array.");
+    }
+
+
 }
 
 #pragma pop_macro("CHECK")

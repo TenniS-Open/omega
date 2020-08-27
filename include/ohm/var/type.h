@@ -13,17 +13,17 @@ namespace ohm {
 
         namespace type {
             enum MainType {
-                None = 0,
-                Scalar = 0x0100,
-                String = 0x0200,
-                Boolean = 0x0300,
-                Array = 0x0400,
-                Object = 0x0500,
+                None = 0x0100,
+                Scalar = 0x0200,
+                String = 0x0300,
+                Boolean = 0x0400,
+                Array = 0x0500,
+                Object = 0x0600,
 
-                Vector = 0x0600,
-                Binary = 0x0700,
+                Vector = 0x0700,
+                Binary = 0x0800,
 
-                Defined = 0x0800,
+                Defined = 0x0900,
 
                 Undefined = 0xFF00,
             };

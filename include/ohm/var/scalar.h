@@ -162,6 +162,11 @@ namespace ohm {
         };
 
         template<>
+        struct code_type<type::VOID> {
+            using type = Empty;
+        };
+
+        template<>
         struct type_code<void> {
             static const DataType code = type::Scalar;
         };

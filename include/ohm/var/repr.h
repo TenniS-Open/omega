@@ -65,6 +65,42 @@ namespace ohm {
             oss << "\"";
             return oss.str();
         }
+
+        inline std::string repr(const Binary &bin) {
+            std::ostringstream oss;
+            oss << "\"@binary@" << bin.size() << "\"";
+            return oss.str();
+        }
+
+        template<typename T>
+        inline typename std::enable_if<
+                !std::is_integral<T>::value &&
+                !std::is_floating_point<T>::value, std::string>::type
+        repr(const T *vector, size_t size) {
+            std::ostringstream oss;
+            oss << "[";
+            for (size_t i = 0; i < size; ++i) {
+                if (i) oss << ", ";
+                oss << repr(type_code<T>::code, &vector[i], element_size<T>());
+            }
+            oss << "]";
+            return oss.str();
+        }
+
+        template<typename T>
+        inline typename std::enable_if<
+                std::is_integral<T>::value ||
+                std::is_floating_point<T>::value, std::string>::type
+        repr(const T *vector, size_t size) {
+            std::ostringstream oss;
+            oss << "[";
+            for (size_t i = 0; i < size; ++i) {
+                if (i) oss << ", ";
+                oss << vector[i];
+            }
+            oss << "]";
+            return oss.str();
+        }
     }
 }
 
