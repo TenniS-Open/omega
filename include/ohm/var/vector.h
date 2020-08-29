@@ -11,39 +11,55 @@ namespace ohm {
     namespace notation {
         class VectorData {
         public:
+            VectorData() = default;
+
             explicit VectorData(size_t size)
-                : m_data(new char[size], std::default_delete<char[]>())
-                , m_size(size) {}
+                    : m_data(new char[size], std::default_delete<char[]>()), m_size(size) {}
 
             void *data() { return m_data.get(); }
 
             const void *data() const { return m_data.get(); }
 
-            template <typename T>
-            T *data() { return reinterpret_cast<T*>(data()); }
+            template<typename T>
+            T *data() { return reinterpret_cast<T *>(data()); }
 
-            template <typename T>
-            const T *data() const { return reinterpret_cast<const T*>(data()); }
+            template<typename T>
+            const T *data() const { return reinterpret_cast<const T *>(data()); }
 
             size_t capacity() const { return m_size; }
 
-            template <typename T>
-            T *at() { return reinterpret_cast<T*>(data()); }
+            template<typename T>
+            T *at() { return reinterpret_cast<T *>(data()); }
 
-            template <typename T>
-            const T *at() const { return reinterpret_cast<const T*>(data()); }
+            template<typename T>
+            const T *at() const { return reinterpret_cast<const T *>(data()); }
 
-            template <typename T>
-            T &ref() { return *reinterpret_cast<T*>(data()); }
+            template<typename T>
+            T &ref() { return *reinterpret_cast<T *>(data()); }
 
-            template <typename T>
-            const T &at() const { return *reinterpret_cast<T*>(data()); }
+            template<typename T>
+            const T &at() const { return *reinterpret_cast<T *>(data()); }
+
+            void reverse(size_t size) {
+                std::shared_ptr<char> new_data(new char[size], std::default_delete<char[]>());
+                auto dst = this->m_data.get();
+                auto src = new_data.get();
+                auto n = std::min(size, m_size);
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+                memcpy_s(dst, n, src, n);
+#else
+                memcpy(dst, src, n);
+#endif
+                m_data = new_data;
+                m_size = size;
+            }
+
         private:
             std::shared_ptr<char> m_data;
-            size_t m_size;
+            size_t m_size = 0;
         };
 
-        template <typename T>
+        template<typename T>
         class Vector : public VectorData {
         public:
             using self = Vector;
@@ -51,7 +67,11 @@ namespace ohm {
 
             using Content = T;
 
+            Vector() : supper() {}
+
             explicit Vector(size_t size) : supper(element_size<T>() * size) {}
+
+            explicit Vector(const VectorData &data) : supper(data) {}
 
             T *data() { return supper::data<T>(); }
 
@@ -61,12 +81,12 @@ namespace ohm {
 
             const T &operator[](size_t i) const { return this->data()[i]; }
 
-            template <typename I, typename=typename std::enable_if<
+            template<typename I, typename=typename std::enable_if<
                     std::is_integral<I>::value &&
                     !std::is_same<I, size_t>::value>::type>
             T &operator[](I i) { return this->operator[](size_t(i)); }
 
-            template <typename I, typename=typename std::enable_if<
+            template<typename I, typename=typename std::enable_if<
                     std::is_integral<I>::value &&
                     !std::is_same<I, size_t>::value>::type>
             const T &operator[](I i) const { return this->operator[](size_t(i)); }
@@ -74,7 +94,7 @@ namespace ohm {
             size_t size() const { capacity() / sizeof(T); }
         };
 
-        template <typename T>
+        template<typename T>
         using ElementVector = ElementBase<type_code<Vector<T>>::code, Vector<T>>;
 
 #define __DEFINE_TYPE_CODE(_type, _code) \
@@ -128,6 +148,16 @@ namespace ohm {
         template<>
         struct type_code<Vector<void>> {
             static const DataType code = type::Scalar;
+        };
+
+        template<typename T, typename=void>
+        struct is_vector : public std::false_type {
+        };
+
+        template<typename T>
+        struct is_vector<Vector<T>, typename std::enable_if<
+                std::is_integral<decltype(type_code<Vector<T>>::code)>::value>::type> : public std::true_type {
+            using Content = T;
         };
     }
 }

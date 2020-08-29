@@ -79,7 +79,8 @@ namespace ohm {
                 return nullptr;
             case type::Scalar:
                 return code_type<type::Scalar>::type::Make();
-//            case type::Vector: return code_type<type::Repeat>::type::Make();
+            case type::Vector:
+                return code_type<type::Vector>::type::Make();
         }
     }
 
@@ -687,6 +688,10 @@ namespace ohm {
                     CASE_TYPE_POINTER(return bool(scalar))
                     CASE_TYPE_NOT_SUPPORTED(throw VarOperatorNotSupported(m_var->code, "bool()"))
                 END_TYPE
+            CASE(notation::type::Binary)
+                return data.size();
+            CASE(notation::type::Vector)
+                return data.size();
             UNEXPECTED_END
         }
 
@@ -713,6 +718,20 @@ namespace ohm {
                     CASE_TYPE_CHAR(return T(scalar))
                     DEFAULT_TYPE(throw VarOperatorNotSupported(this->type(), __op))
                 END_TYPE
+            UNEXPECTED_END
+        }
+
+        template<typename T, typename=typename std::enable_if<
+                notation::is_vector<T>::value>::type>
+        notation::Vector<typename notation::is_vector<T>::Content>
+                cpp() const {
+            CHECK(std::string(typeid(T).name()) + "()")
+            SWITCH
+            CASE(notation::type::Vector)
+                auto wanted_type = notation::type::Vector | notation::type_code<T>::code;
+                if (m_var->code != wanted_type)
+                    throw VarOperatorNotSupported(type(), __op, { notation::type_string(wanted_type) });
+                return notation::Vector<T>(data);
             UNEXPECTED_END
         }
 
@@ -767,6 +786,8 @@ namespace ohm {
                 data.resize(size);
             CASE(notation::type::Binary)
                 data.resize(size);
+            CASE(notation::type::Vector)
+                data.reverse(size * notation::sub_type_size(notation::type::SubType(m_var->code & 0xFF)));
             END
         }
 
@@ -779,6 +800,8 @@ namespace ohm {
                 return data.size();
             CASE(notation::type::Binary)
                 return data.size();
+            CASE(notation::type::Vector)
+                return data.capacity() / notation::sub_type_size(notation::type::SubType(m_var->code & 0xFF));
             UNEXPECTED_END
         }
 
@@ -838,6 +861,8 @@ namespace ohm {
                     SWITCH_TYPE(m_var->code)
                         CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, notation::element_size(scalar)))
                     END_TYPE
+                ID_CASE(notation::type::Vector)
+                    _UNSAFE_RETURN(data.data(), data.capacity())
             ID_END
             _UNSAFE_RETURN(nullptr, 0)
 #undef _UNSAFE_RETURN
@@ -864,6 +889,8 @@ namespace ohm {
                     SWITCH_TYPE(m_var->code)
                         CASE_TYPE_ANY(return &scalar);
                     END_TYPE
+                ID_CASE(notation::type::Vector)
+                    return &data;
             ID_END
             return nullptr;
         }
@@ -876,7 +903,7 @@ namespace ohm {
             if (!m_var) return "\"@undefined\"";
             ID_SWITCH(m_var->code)
                 ID_DEFAULT
-                    return "\"@undefined\"";
+                    return "\"@" + notation::type_string(type()) + "\"";
                 ID_CASE(notation::type::None)
                     return "null";
                 ID_CASE(notation::type::Boolean)

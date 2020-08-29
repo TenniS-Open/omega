@@ -172,6 +172,38 @@ namespace ohm {
             return "unknown";
         }
 
+        inline size_t sub_type_size(type::SubType type) {
+            using namespace type;
+            switch (type) {
+                case VOID: return 0;
+                case INT8: return 1;
+                case UINT8: return 1;
+                case INT16: return 2;
+                case UINT16: return 2;
+                case INT32: return 4;
+                case UINT32: return 4;
+                case INT64: return 8;
+                case UINT64: return 8;
+                case FLOAT16: return 2;
+                case FLOAT32: return 4;
+                case FLOAT64: return 8;
+                case PTR: return sizeof(decltype(std::declval<void*>()));
+                case CHAR8: return 1;
+                case CHAR16: return 2;
+                case CHAR32: return 4;
+                case UNKNOWN8: return 1;
+                case UNKNOWN16: return 2;
+                case UNKNOWN32: return 4;
+                case UNKNOWN64: return 8;
+                case UNKNOWN128: return 16;
+                case BOOLEAN: return 1;
+                case COMPLEX32: return 4;
+                case COMPLEX64: return 8;
+                case COMPLEX128: return 16;
+            }
+            return 0;
+        }
+
         inline std::string type_string(DataType type) {
             switch (type & 0xFF00) {
                 default: return "unknown";
@@ -184,7 +216,7 @@ namespace ohm {
                 case type::Undefined: return "undefined";
 
                 case type::Scalar: return sub_type_string(type::SubType(type & 0xFF));
-                case type::Vector: return "repeat<" + sub_type_string(type::SubType(type & 0xFF)) + ">";
+                case type::Vector: return "vector<" + sub_type_string(type::SubType(type & 0xFF)) + ">";
             }
         }
 
@@ -199,7 +231,7 @@ namespace ohm {
                 case type::Binary: return "binary";
                 case type::Undefined: return "undefined";
                 case type::Scalar: return "scalar";
-                case type::Vector: return "repeat";
+                case type::Vector: return "vector";
             }
         }
 
