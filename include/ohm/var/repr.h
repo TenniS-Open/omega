@@ -15,6 +15,12 @@ namespace ohm {
     namespace notation {
         inline std::string repr(Element::shared element);
 
+        inline std::string repr(const std::string &str) {
+            std::ostringstream oss;
+            oss << "\"" << encode(str) << "\"";
+            return oss.str();
+        }
+
         inline std::string repr(const Array &arr) {
             std::ostringstream oss;
             oss << "[";

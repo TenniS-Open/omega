@@ -8,6 +8,8 @@
 #include "notation.h"
 
 #include <string>
+#include <sstream>
+#include <unordered_map>
 
 namespace ohm {
     namespace notation {
@@ -23,6 +25,29 @@ namespace ohm {
         struct code_type<type::String> {
             using type = StringBase;
         };
+
+        inline std::string encode(const std::string &str) {
+            std::ostringstream oss;
+            static const std::unordered_map<char, std::string> escape = {
+                    {'\"', R"(\")"},
+                    {'\\', R"(\\)"},
+                    {'/', R"(/)"},
+                    {'\b', R"(\b)"},
+                    {'\f', R"(\f)"},
+                    {'\n', R"(\n)"},
+                    {'\r', R"(\r)"},
+                    {'\t', R"(\t)"},
+            };
+            for (auto &ch : str) {
+                auto it = escape.find(ch);
+                if (it != escape.end()) {
+                    oss << it->second;
+                } else {
+                    oss << ch;
+                }
+            }
+            return oss.str();
+        }
     }
 }
 

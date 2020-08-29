@@ -882,7 +882,7 @@ namespace ohm {
                 ID_CASE(notation::type::Boolean)
                     return data ? "true" : "false";
                 ID_CASE(notation::type::String)
-                    return "\"" + data + "\"";
+                    return notation::repr(data);
                 ID_CASE(notation::type::Array)
                     return notation::repr(data);
                 ID_CASE(notation::type::Object)
