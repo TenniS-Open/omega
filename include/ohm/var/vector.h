@@ -59,6 +59,10 @@ namespace ohm {
                     : supper(type::Vector | (type & 0xFF),
                             VectorContent(size * sub_type_size(type::SubType(type & 0xFF)))) {}
 
+            explicit ElementVector(DataType type, VectorContent content)
+                    : supper(type::Vector | (type & 0xFF),
+                             VectorContent(std::move(content))) {}
+
             void *data() { return content.data(); }
 
             const void *data() const { return content.data(); }
@@ -98,9 +102,13 @@ namespace ohm {
             using self = Vector;
             using supper = ElementVector;
 
+            using value_type = T;
+
             Vector() : supper() {}
 
             explicit Vector(size_t size) : supper(sub_type_code<T>::code, size) {}
+
+            explicit Vector(VectorContent content) : supper(sub_type_code<T>::code, std::move(content)) {}
 
             T *data() { return supper::data<T>(); }
 
@@ -185,7 +193,7 @@ namespace ohm {
         template<typename T>
         struct is_vector<Vector<T>, typename std::enable_if<
                 std::is_integral<decltype(type_code<Vector<T>>::code)>::value>::type> : public std::true_type {
-            using Content = T;
+            using value_type = T;
         };
     }
 }

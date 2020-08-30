@@ -712,15 +712,16 @@ namespace ohm {
 
         template<typename T, typename=typename std::enable_if<
                 notation::is_vector<T>::value>::type>
-        notation::Vector<typename notation::is_vector<T>::Content>
+        notation::Vector<typename notation::is_vector<T>::value_type>
                 cpp() const {
-            CHECK(std::string(typeid(T).name()) + "()")
+            using value_type = typename notation::is_vector<T>::value_type;
+            CHECK("vector<" + std::string(typeid(T).name()) + ">()")
             SWITCH
             CASE(notation::type::Vector)
                 auto wanted_type = notation::type::Vector | notation::type_code<T>::code;
                 if (m_var->type != wanted_type)
-                    throw VarOperatorNotSupported(type(), __op, { notation::type_string(wanted_type) });
-                return notation::Vector<T>(content);
+                    throw VarOperatorNotSupported(type(), __op, { wanted_type });
+                return notation::Vector<value_type>(content);
             UNEXPECTED_END
         }
 
@@ -826,6 +827,11 @@ namespace ohm {
     } \
     }
 
+        /**
+         * got cpp memory data, only scalar, vector, and binary is meaningful
+         * @param ptr
+         * @param size
+         */
         void unsafe(void **ptr, size_t *size) const {
 #define _UNSAFE_RETURN(a, b) \
             { *ptr = (a); *size = (b); return; }
@@ -846,7 +852,7 @@ namespace ohm {
                 ID_CASE(notation::type::Object)
                     _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::Binary)
-                    _UNSAFE_RETURN(&content, notation::element_size(content))
+                    _UNSAFE_RETURN(content.data(), content.size())
                 ID_CASE(notation::type::Scalar)
                     SWITCH_TYPE(m_var->type)
                         CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, notation::element_size(scalar)))
