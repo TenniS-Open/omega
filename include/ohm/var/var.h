@@ -164,11 +164,7 @@ namespace ohm {
 #define CASE_TYPE(sub_type) \
     } \
     case sub_type: { \
-        using type = notation::code_sub_type<sub_type>::type; \
-        auto &scalar = element.template ref<type>(); \
-        (void)(scalar); \
-        auto vector = element.template at<type>(); \
-        (void)(vector);
+        using type = notation::code_sub_type<sub_type>::type;
 
 #define DEFAULT_TYPE(codes) \
     } \
@@ -682,13 +678,13 @@ namespace ohm {
                     return notation::repr(content);
                 ID_CASE(notation::type::Scalar)
                     SWITCH_TYPE(m_var->type)
-                        CASE_TYPE_ANY(return notation::scalar_repr(scalar))
+                        CASE_TYPE_ANY(return notation::scalar_repr(element.ref<type>()))
                     END_TYPE
                 ID_CASE(notation::type::Binary)
                     return notation::repr(content);
                 ID_CASE(notation::type::Vector)
                     SWITCH_TYPE(m_var->type)
-                        CASE_TYPE_ANY(return notation::repr(vector, element.size()))
+                        CASE_TYPE_ANY(return notation::repr(element.data<type>(), element.size()))
                     END_TYPE
             ID_END
             return nullptr;
