@@ -337,6 +337,12 @@ namespace ohm {
             constexpr operator bool() const { return false; }
         };    // for empty data, well it will use 1 byte, but represent zero size;
 
+        namespace {
+            struct {
+                constexpr operator bool() const { return false; }
+            } Undefined;
+        }
+
         template<typename T>
         struct __element_size {
             static constexpr size_t value = sizeof(T);

@@ -256,6 +256,14 @@ namespace ohm {
             return *this;
         }
 
+        Var &operator=(const decltype(notation::Undefined) &) {
+            m_var.reset();
+            if (m_notifier) {
+                m_notifier(m_var);
+            }
+            return *this;
+        }
+
         template<typename T>
         typename std::enable_if<
                 is_var_element<T>::value && !std::is_pointer<T>::value
@@ -319,7 +327,8 @@ namespace ohm {
             auto it = data.find(key);
             if (it == data.end()) {
                 notation::Element::weak storage = m_var;
-                auto notifier = [=](notation::Element::shared var) {
+                auto notifier = [=](const notation::Element::shared &var) {
+                    if (!var) return;
                     auto shared_storage = storage.lock();
                     if (!shared_storage) return;
                     auto obj = reinterpret_cast<notation::ElementObject *>(shared_storage.get());
@@ -327,10 +336,14 @@ namespace ohm {
                 };
                 return Var(notifier);
             } else {
-                notation::Element::weak storage = m_var;
+                notation::Element::weak stroage = m_var;
                 auto &value = it->second;
-                auto notifier = [=, &value](notation::Element::shared var) {
-                    auto shared_storage = storage.lock();
+                auto notifier = [stroage, it, &data, &value](const notation::Element::shared &var) {
+                    if (!var) {
+                        data.erase(it);
+                        return;
+                    }
+                    auto shared_storage = stroage.lock();
                     if (!shared_storage) return;
                     auto obj = reinterpret_cast<notation::ElementObject *>(shared_storage.get());
                     value = std::move(var);
@@ -710,7 +723,7 @@ namespace ohm {
                 : m_notifier(std::move(notifier)) {}
 
         notation::Element::shared m_var;
-        std::function<void(notation::Element::shared)> m_notifier;
+        std::function<void(const notation::Element::shared &)> m_notifier;
 
         friend std::string notation::repr(notation::Element::shared element);
     };
