@@ -100,6 +100,21 @@ namespace ohm {
             return Var(std::move(object));
         }
 
+        inline Var read_binary(Context &ctx, const VarReader &reader) {
+            auto size = expect<size_t>(ctx, "integer", read_var(ctx, reader));
+            notation::Binary bin;
+            bin.resize(size);
+            reader(bin.data<char>(), bin.size());
+            return Var(bin);
+        }
+
+        inline Var read_vector(Context &ctx, notation::DataType type, const VarReader &reader) {
+            auto size = expect<size_t>(ctx, "integer", read_var(ctx, reader));
+            notation::ElementVector vec(notation::type::Vector | (type & 0xFF), size);
+            reader(vec.data<char>(), vec.capacity());
+            return Var(vec);
+        }
+
         inline Var read_scalar(Context &ctx, notation::DataType type, const VarReader &reader) {
 #pragma push_macro("READ_TYPE")
 #define READ_TYPE(__type) \
@@ -155,6 +170,10 @@ namespace ohm {
                     return read_object(ctx, reader);
                 case notation::type::Scalar:
                     return read_scalar(ctx, datatype, reader);
+                case notation::type::Binary:
+                    return read_binary(ctx, reader);
+                case notation::type::Vector:
+                    return read_vector(ctx, datatype, reader);
             }
             throw VarIOUnrecognizedType(ctx, datatype);
         }

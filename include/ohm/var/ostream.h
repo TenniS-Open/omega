@@ -70,6 +70,21 @@ namespace ohm {
             return writen;
         }
 
+        inline size_t write_var_binary(const void *t, size_t size, const VarWriter &writer) {
+            size_t writen = 0;
+            writen += write_var(Var(int32_t(size)), writer);
+            writen += writer(t, size);
+            return writen;
+        }
+
+        inline size_t write_var_vector(notation::DataType type, const void *t, size_t size, const VarWriter &writer) {
+            size_t writen = 0;
+            writen += write_var(Var(int32_t(
+                    size / notation::sub_type_size(notation::type::SubType(type & 0xFF)))), writer);
+            writen += writer(t, size);
+            return writen;
+        }
+
         inline size_t write_var(const Var &var, const VarWriter &writer) {
             void *data;
             size_t size;
@@ -95,6 +110,12 @@ namespace ohm {
                     break;
                 case notation::type::Scalar:
                     writen += write_var_body(data, size, writer);
+                    break;
+                case notation::type::Binary:
+                    writen += write_var_binary(data, size, writer);
+                    break;
+                case notation::type::Vector:
+                    writen += write_var_vector(var.type(), data, size, writer);
                     break;
             }
             return writen;
