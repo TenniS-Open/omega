@@ -72,6 +72,22 @@ namespace ohm {
             return oss.str();
         }
 
+        template<typename T>
+        inline typename std::enable_if<
+                !std::is_integral<T>::value &&
+                !std::is_floating_point<T>::value, std::string>::type
+        scalar_repr(const T &t) {
+            return repr(type::Scalar | sub_type_code<T>::code, &t, element_size<T>());
+        }
+
+        template<typename T>
+        inline typename std::enable_if<
+                std::is_integral<T>::value ||
+                std::is_floating_point<T>::value, std::string>::type
+        scalar_repr(const T &t) {
+            return repr(t);
+        }
+
         inline std::string repr(const Binary &bin) {
             std::ostringstream oss;
             oss << "\"@binary@" << bin.size() << "\"";

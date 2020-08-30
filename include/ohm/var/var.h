@@ -20,6 +20,8 @@
 #include "repr.h"
 #include "cast.h"
 
+#include "varexception.h"
+
 #include <type_traits>
 #include <sstream>
 
@@ -41,183 +43,6 @@ namespace ohm {
             notation::is_notation_type<typename notation::remove_cr<T>::type>::value &&
             std::is_constructible<typename notation::type_type<
             typename notation::remove_cr<T>::type>::type, T>::value>::type> : public std::true_type {
-    };
-
-//    template <typename T>
-//    struct is_var_element : public std::integral_constant<bool,
-//            notation::is_notation_type<typename remove_cr<T>::type>::value &&
-//            std::is_constructible<typename notation::type_type<
-//                    typename remove_cr<T>::type>::type, T>::value> {};
-
-//    inline constexpr bool is_var_code_signed()
-//
-//    inline constexpr bool is_var_code_convertible(notation::DataType from, notation::DataType to) {
-//        if ((from & 0xFF00) == notation::type::Scalar && (to & 0xFF00) == notation::type::Scalar) {
-//
-//        }
-//        return false;
-//    }
-
-    class VarException : public std::logic_error {
-    public:
-        using self = VarException;
-        using supper = std::logic_error;
-
-        explicit VarException(const std::string &msg) : std::logic_error(msg) {}
-    };
-
-    class VarNotSupportSlice : public VarException {
-    public:
-        using self = VarNotSupportSlice;
-        using supper = VarException;
-
-        explicit VarNotSupportSlice(notation::DataType type)
-                : supper(Message(type)) {}
-
-        explicit VarNotSupportSlice(notation::DataType type, int64_t index)
-                : supper(Message(type, index)) {}
-
-        explicit VarNotSupportSlice(notation::DataType type, const std::string &key)
-                : supper(Message(type, key)) {}
-
-        static std::string Message(notation::DataType type) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << "[] does not supported.";
-            return oss.str();
-        }
-
-        static std::string Message(notation::DataType type, int64_t index) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << "[" << index << "] does not supported.";
-            return oss.str();
-        }
-
-        static std::string Message(notation::DataType type, const std::string &key) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << "[\"" << key << "\"] does not supported.";
-            return oss.str();
-        }
-    };
-
-    class VarAttributeNotFound : public VarException {
-    public:
-        using self = VarAttributeNotFound;
-        using supper = VarException;
-
-        explicit VarAttributeNotFound(notation::DataType type, const std::string &key)
-                : supper(Message(type, key)) {}
-
-        static std::string Message(notation::DataType type, const std::string &key) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << " attribute \"" << key << "\" not found.";
-            return oss.str();
-        }
-    };
-
-    class VarIndexOutOfRange : public VarException {
-    public:
-        using self = VarAttributeNotFound;
-        using supper = VarException;
-
-        explicit VarIndexOutOfRange(notation::DataType type, int64_t index)
-                : supper(Message(type, index)) {}
-
-        explicit VarIndexOutOfRange(notation::DataType type, int64_t index, size_t size)
-                : supper(Message(type, index, size)) {}
-
-        static std::string Message(notation::DataType type, int64_t index) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << " index " << index << " out of range.";
-            return oss.str();
-        }
-
-        static std::string Message(notation::DataType type, int64_t index, size_t size) {
-            std::ostringstream oss;
-            if (size) {
-                oss << notation::type_string(type) << " index " << index << " out of range."
-                    << " Must in [-" << size << ", " << size - 1 << "].";
-            } else {
-                oss << notation::type_string(type) << " index " << index << " out of range."
-                    << " The " << notation::type_string(type) << " is empty.";
-            }
-            return oss.str();
-        }
-    };
-
-    class VarOperatorNotSupported : public VarException {
-    public:
-        using self = VarOperatorNotSupported;
-        using supper = VarException;
-
-        explicit VarOperatorNotSupported(notation::DataType type,
-                                         const std::string &op)
-                : supper(Message(type, op)) {}
-
-        explicit VarOperatorNotSupported(notation::DataType type,
-                                         const std::string &op,
-                                         const std::vector<notation::DataType> &supported)
-                : supper(Message(type, op, supported)) {}
-
-        static std::string Message(notation::DataType type,
-                                   const std::string &op,
-                                   const std::vector<notation::DataType> &supported) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << " operator " << op << " not supported, expecting: ";
-            for (size_t i = 0; i < supported.size(); ++i) {
-                if (i) oss << ", ";
-                oss << notation::main_type_string(supported[i]);
-            }
-            oss << ".";
-            return oss.str();
-        }
-
-        static std::string Message(notation::DataType type,
-                                   const std::string &op) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << " operator " << op << " not supported.";
-            return oss.str();
-        }
-    };
-
-    class VarOperatorParameterMismatch : public VarException {
-    public:
-        using self = VarOperatorParameterMismatch;
-        using supper = VarException;
-
-        explicit VarOperatorParameterMismatch(notation::DataType type,
-                                              const std::string &op,
-                                              int param)
-                : supper(Message(type, op, param)) {}
-
-        explicit VarOperatorParameterMismatch(notation::DataType type,
-                                              const std::string &op,
-                                              int param,
-                                              const std::vector<notation::DataType> &supported)
-                : supper(Message(type, op, param, supported)) {}
-
-        static std::string Message(notation::DataType type,
-                                   const std::string &op,
-                                   int param,
-                                   const std::vector<notation::DataType> &supported) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << " operator " << op
-                << " parameter " << param << " mismatched, expecting: ";
-            for (size_t i = 0; i < supported.size(); ++i) {
-                if (i) oss << ", ";
-                oss << notation::main_type_string(supported[i]);
-            }
-            oss << ".";
-            return oss.str();
-        }
-
-        static std::string Message(notation::DataType type,
-                                   const std::string &op,
-                                   int param) {
-            std::ostringstream oss;
-            oss << notation::type_string(type) << " operator " << op
-                << " parameter " << param << " mismatched.";
-            return oss.str();
-        }
     };
 
     template<typename T, typename K>
@@ -251,20 +76,17 @@ namespace ohm {
 #pragma push_macro("END")
 #pragma push_macro("DEFAULT")
 #pragma push_macro("UNEXPECTED_END")
+
 #pragma push_macro("SWITCH_TYPE")
 #pragma push_macro("CASE_TYPE")
 #pragma push_macro("DEFAULT_TYPE")
 #pragma push_macro("END_TYPE")
-
-#pragma push_macro("CASE_NO_TYPE")
-#pragma push_macro("CASE_TYPE_INTEGER")
-#pragma push_macro("CASE_TYPE_FLOOT")
-#pragma push_macro("CASE_TYPE_BOOL")
-#pragma push_macro("CASE_TYPE_NOT_SUPPORTED")
-#pragma push_macro("CASE_TYPE_CHAR")
-#pragma push_macro("CASE_TYPE_VOID")
-#pragma push_macro("CASE_TYPE_POINTER")
 #pragma push_macro("CASE_TYPE_ANY")
+
+#pragma push_macro("ID_SWITCH")
+#pragma push_macro("ID_DEFAULT")
+#pragma push_macro("ID_CASE")
+#pragma push_macro("ID_END")
 
 /**
  * If no CASE matched, it will throw VarNotSupportedException
@@ -356,45 +178,6 @@ namespace ohm {
     } \
     }
 
-#define CASE_TYPE_INTEGER(codes) \
-    CASE_TYPE(notation::type::INT8) codes; \
-    CASE_TYPE(notation::type::UINT8) codes; \
-    CASE_TYPE(notation::type::INT16) codes; \
-    CASE_TYPE(notation::type::UINT16) codes; \
-    CASE_TYPE(notation::type::INT32) codes; \
-    CASE_TYPE(notation::type::UINT32) codes; \
-    CASE_TYPE(notation::type::INT64) codes; \
-    CASE_TYPE(notation::type::UINT64) codes;
-
-#define CASE_TYPE_FLOOT(codes) \
-    CASE_TYPE(notation::type::FLOAT32) codes; \
-    CASE_TYPE(notation::type::FLOAT64) codes;
-
-#define CASE_TYPE_BOOL(codes) \
-    CASE_TYPE(notation::type::BOOLEAN) codes;
-
-#define CASE_TYPE_NOT_SUPPORTED(codes) \
-    CASE_TYPE(notation::type::FLOAT16) codes; \
-    CASE_TYPE(notation::type::UNKNOWN8) codes; \
-    CASE_TYPE(notation::type::UNKNOWN16) codes; \
-    CASE_TYPE(notation::type::UNKNOWN32) codes; \
-    CASE_TYPE(notation::type::UNKNOWN64) codes; \
-    CASE_TYPE(notation::type::UNKNOWN128) codes; \
-    CASE_TYPE(notation::type::COMPLEX32) codes; \
-    CASE_TYPE(notation::type::COMPLEX64) codes; \
-    CASE_TYPE(notation::type::COMPLEX128) codes;
-
-#define CASE_TYPE_CHAR(codes) \
-    CASE_TYPE(notation::type::CHAR8) codes; \
-    CASE_TYPE(notation::type::CHAR16) codes; \
-    CASE_TYPE(notation::type::CHAR32) codes;
-
-#define CASE_TYPE_VOID(codes) \
-    CASE_TYPE(notation::type::VOID) codes;
-
-#define CASE_TYPE_POINTER(codes) \
-    CASE_TYPE(notation::type::PTR) codes;
-
 #define CASE_TYPE_ANY(codes) \
     CASE_TYPE(notation::type::INT8) codes; \
     CASE_TYPE(notation::type::UINT8) codes; \
@@ -422,31 +205,27 @@ namespace ohm {
     CASE_TYPE(notation::type::VOID) codes; \
     CASE_TYPE(notation::type::PTR) codes;
 
-#define CASE_TYPE_NONVOID(codes) \
-    CASE_TYPE(notation::type::INT8) codes; \
-    CASE_TYPE(notation::type::UINT8) codes; \
-    CASE_TYPE(notation::type::INT16) codes; \
-    CASE_TYPE(notation::type::UINT16) codes; \
-    CASE_TYPE(notation::type::INT32) codes; \
-    CASE_TYPE(notation::type::UINT32) codes; \
-    CASE_TYPE(notation::type::INT64) codes; \
-    CASE_TYPE(notation::type::UINT64) codes; \
-    CASE_TYPE(notation::type::FLOAT32) codes; \
-    CASE_TYPE(notation::type::FLOAT64) codes; \
-    CASE_TYPE(notation::type::BOOLEAN) codes; \
-    CASE_TYPE(notation::type::FLOAT16) codes; \
-    CASE_TYPE(notation::type::UNKNOWN8) codes; \
-    CASE_TYPE(notation::type::UNKNOWN16) codes; \
-    CASE_TYPE(notation::type::UNKNOWN32) codes; \
-    CASE_TYPE(notation::type::UNKNOWN64) codes; \
-    CASE_TYPE(notation::type::UNKNOWN128) codes; \
-    CASE_TYPE(notation::type::COMPLEX32) codes; \
-    CASE_TYPE(notation::type::COMPLEX64) codes; \
-    CASE_TYPE(notation::type::COMPLEX128) codes; \
-    CASE_TYPE(notation::type::CHAR8) codes; \
-    CASE_TYPE(notation::type::CHAR16) codes; \
-    CASE_TYPE(notation::type::CHAR32) codes; \
-    CASE_TYPE(notation::type::PTR) codes;
+#define ID_SWITCH(type) \
+    switch (type & 0xFF00) { \
+    case 0xFF00: \
+    {
+
+#define ID_DEFAULT \
+    } \
+    default: \
+    {
+
+#define ID_CASE(main_type) \
+    } \
+    case main_type: \
+    { \
+        auto &element = *static_cast<typename notation::code_type<main_type>::type*>(m_var.get()); \
+        auto &content = __at<typename notation::code_type<main_type>::type>(m_var.get())->content;
+
+
+#define ID_END \
+    } \
+    }
 
     class Var {
     public:
@@ -669,13 +448,12 @@ namespace ohm {
                 return content.size();
             CASE(notation::type::Scalar)
                 SWITCH_TYPE(m_var->type)
-                    CASE_TYPE_INTEGER(return bool(scalar))
-                    CASE_TYPE_FLOOT(return scalar != 0)
-                    CASE_TYPE_BOOL(return scalar.data)
-                    CASE_TYPE_VOID(return false)
-                    CASE_TYPE_CHAR(return bool(scalar))
-                    CASE_TYPE_POINTER(return bool(scalar))
-                    CASE_TYPE_NOT_SUPPORTED(throw VarOperatorNotSupported(m_var->type, "bool()"))
+                    CASE_TYPE_ANY(
+                            try {
+                                return (notation::cast2<bool, type>().eval(element.ref<type>()));
+                            } catch (const notation::CastException &) {
+                                throw VarOperatorNotSupported(this->type(), __op);
+                            })
                 END_TYPE
             CASE(notation::type::Binary)
                 return content.size();
@@ -700,12 +478,12 @@ namespace ohm {
                 }
             CASE(notation::type::Scalar)
                 SWITCH_TYPE(m_var->type)
-                    CASE_TYPE_INTEGER(return T(scalar))
-                    CASE_TYPE_FLOOT(return T(T(scalar)))
-                    CASE_TYPE_BOOL(return scalar.data ? 1 : 0)
-                    CASE_TYPE_VOID(return 0)
-                    CASE_TYPE_CHAR(return T(scalar))
-                    DEFAULT_TYPE(throw VarOperatorNotSupported(this->type(), __op))
+                    CASE_TYPE_ANY(
+                            try {
+                                return (notation::cast2<T, type>().eval(element.ref<type>()));
+                            } catch (const notation::CastException &) {
+                                throw VarOperatorNotSupported(this->type(), __op);
+                            })
                 END_TYPE
             UNEXPECTED_END
         }
@@ -791,7 +569,15 @@ namespace ohm {
             CASE(notation::type::Binary)
                 return content.size();
             CASE(notation::type::Vector)
-                return content.capacity() / notation::sub_type_size(notation::type::SubType(m_var->type & 0xFF));
+                return element.size();
+            UNEXPECTED_END
+        }
+
+        bool has(const std::string &key) {
+            CHECK("size")
+            SWITCH
+            CASE(notation::type::Object)
+                return content.find(key) != content.end();
             UNEXPECTED_END
         }
 
@@ -799,33 +585,6 @@ namespace ohm {
         operator T() const {
             return cpp<T>();
         }
-
-#pragma push_macro("ID_SWITCH")
-#pragma push_macro("ID_DEFAULT")
-#pragma push_macro("ID_CASE")
-#pragma push_macro("ID_END")
-
-#define ID_SWITCH(type) \
-    switch (type & 0xFF00) { \
-    case 0xFF00: \
-    {
-
-#define ID_DEFAULT \
-    } \
-    default: \
-    {
-
-#define ID_CASE(main_type) \
-    } \
-    case main_type: \
-    { \
-        auto &element = *static_cast<typename notation::code_type<main_type>::type*>(m_var.get()); \
-        auto &content = __at<typename notation::code_type<main_type>::type>(m_var.get())->content;
-
-
-#define ID_END \
-    } \
-    }
 
         /**
          * got cpp memory data, only scalar, vector, and binary is meaningful
@@ -854,9 +613,7 @@ namespace ohm {
                 ID_CASE(notation::type::Binary)
                     _UNSAFE_RETURN(content.data(), content.size())
                 ID_CASE(notation::type::Scalar)
-                    SWITCH_TYPE(m_var->type)
-                        CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, notation::element_size(scalar)))
-                    END_TYPE
+                    _UNSAFE_RETURN(element.at<char>(), notation::sub_type_size(notation::type::SubType(element.type & 0xFF)))
                 ID_CASE(notation::type::Vector)
                     _UNSAFE_RETURN(content.data(), content.capacity())
             ID_END
@@ -883,7 +640,7 @@ namespace ohm {
                     return &content;
                 ID_CASE(notation::type::Scalar)
                     SWITCH_TYPE(m_var->type)
-                        CASE_TYPE_ANY(return &scalar);
+                        CASE_TYPE_ANY(return element.at<type>());
                     END_TYPE
                 ID_CASE(notation::type::Vector)
                     return &content;
@@ -912,13 +669,7 @@ namespace ohm {
                     return notation::repr(content);
                 ID_CASE(notation::type::Scalar)
                     SWITCH_TYPE(m_var->type)
-                        CASE_TYPE_INTEGER(return notation::repr(scalar))
-                        CASE_TYPE_FLOOT(return notation::repr(scalar))
-                        CASE_TYPE_BOOL(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
-                        CASE_TYPE_VOID(return notation::repr(m_var->type, nullptr, 0))
-                        CASE_TYPE_CHAR(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
-                        CASE_TYPE_POINTER(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
-                        CASE_TYPE_NOT_SUPPORTED(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
+                        CASE_TYPE_ANY(return notation::scalar_repr(scalar))
                     END_TYPE
                 ID_CASE(notation::type::Binary)
                     return notation::repr(content);
@@ -937,11 +688,6 @@ namespace ohm {
             }
             return repr();
         }
-
-#pragma pop_macro("ID_SWITCH")
-#pragma pop_macro("ID_DEFAULT")
-#pragma pop_macro("ID_CASE")
-#pragma pop_macro("ID_END")
 
         static Var From(notation::Element::shared element) {
             return Var(std::move(element));
@@ -1015,18 +761,16 @@ namespace ohm {
 #pragma pop_macro("END")
 #pragma pop_macro("DEFAULT")
 #pragma pop_macro("UNEXPECTED_END")
+
 #pragma pop_macro("SWITCH_TYPE")
 #pragma pop_macro("CASE_TYPE")
 #pragma pop_macro("DEFAULT_TYPE")
 #pragma pop_macro("END_TYPE")
-#pragma pop_macro("CASE_NO_TYPE")
-#pragma pop_macro("CASE_TYPE_INTEGER")
-#pragma pop_macro("CASE_TYPE_FLOOT")
-#pragma pop_macro("CASE_TYPE_BOOL")
-#pragma pop_macro("CASE_TYPE_NOT_SUPPORTED")
-#pragma pop_macro("CASE_TYPE_CHAR")
-#pragma pop_macro("CASE_TYPE_VOID")
-#pragma pop_macro("CASE_TYPE_POINTER")
 #pragma pop_macro("CASE_TYPE_ANY")
+
+#pragma pop_macro("ID_SWITCH")
+#pragma pop_macro("ID_DEFAULT")
+#pragma pop_macro("ID_CASE")
+#pragma pop_macro("ID_END")
 
 #endif //OMEGA_VAR_VAR_H

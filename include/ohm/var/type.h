@@ -68,6 +68,7 @@ namespace ohm {
 
         namespace scalar {
             struct Void {
+                constexpr operator bool() const { return false; }
             };
 
             /**
@@ -333,6 +334,7 @@ namespace ohm {
         }
 
         struct Empty {
+            constexpr operator bool() const { return false; }
         };    // for empty data, well it will use 1 byte, but represent zero size;
 
         template<typename T>
