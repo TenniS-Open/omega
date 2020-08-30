@@ -12,7 +12,7 @@ namespace ohm {
     namespace notation {
         using Object = std::map<std::string, Element::shared>;
 
-        using ElementObject = ElementBase<type::Object, Object>;
+        using ElementObject = TrustElement<type::Object, Object>;
 
         template<>
         struct type_code<Object> {

@@ -9,13 +9,18 @@
 
 namespace ohm {
     namespace notation {
+        using Boolean = bool;
+
+        using ElementBoolean = TrustElement<type::Boolean, Boolean>;
+
         template<>
-        struct type_code<bool> {
+        struct type_code<Boolean> {
             static const DataType code = type::Boolean;
         };
+
         template<>
         struct code_type<type::Boolean> {
-            using type = ElementBase<type::Boolean, bool>;
+            using type = ElementBoolean;
         };
     }
 }

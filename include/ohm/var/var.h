@@ -58,32 +58,6 @@ namespace ohm {
 //        return false;
 //    }
 
-    inline notation::Element::shared code2object(notation::DataType code) {
-        using namespace notation;
-        switch (code & 0xFF00) {
-            default:
-                return nullptr;
-            case type::None:
-                return code_type<type::None>::type::Make();
-            case type::Boolean:
-                return code_type<type::Boolean>::type::Make();
-            case type::String:
-                return code_type<type::String>::type::Make();
-            case type::Array:
-                return code_type<type::Array>::type::Make();
-            case type::Object:
-                return code_type<type::Object>::type::Make();
-            case type::Binary:
-                return code_type<type::String>::type::Make();
-            case type::Undefined:
-                return nullptr;
-            case type::Scalar:
-                return code_type<type::Scalar>::type::Make();
-            case type::Vector:
-                return code_type<type::Vector>::type::Make();
-        }
-    }
-
     class VarException : public std::logic_error {
     public:
         using self = VarException;
@@ -314,10 +288,11 @@ namespace ohm {
 #define CASE(main_type) \
     } \
     __checked_type.push_back(main_type); \
-    if (!__checked && m_var && (m_var->code & 0xFF00) == (main_type & 0xFF00)) { \
+    if (!__checked && m_var && (m_var->type & 0xFF00) == (main_type & 0xFF00)) { \
         __checked = true; \
-        auto &data = __at<typename notation::code_type<main_type>::type>(m_var.get())->data; \
-        (void)(data);
+        auto &element = *static_cast<typename notation::code_type<main_type>::type*>(m_var.get()); \
+        auto &content = __at<typename notation::code_type<main_type>::type>(m_var.get())->content; \
+        (void)(content);
 
 /**
  * Use for Has or not return function, achive if no case matched.
@@ -336,7 +311,7 @@ namespace ohm {
 #define END \
     } \
     if (!__checked) { \
-        throw VarOperatorNotSupported(m_var ? m_var->code : notation::type::Undefined, \
+        throw VarOperatorNotSupported(m_var ? m_var->type : notation::type::Undefined, \
             __op, __checked_type); \
     }
 /**
@@ -344,7 +319,7 @@ namespace ohm {
  */
 #define UNEXPECTED_END \
     } \
-    throw VarOperatorNotSupported(m_var ? m_var->code : notation::type::Undefined, \
+    throw VarOperatorNotSupported(m_var ? m_var->type : notation::type::Undefined, \
         __op, __checked_type);
 
 /**
@@ -367,10 +342,10 @@ namespace ohm {
 #define CASE_TYPE(sub_type) \
     } \
     case sub_type: { \
-        using type = notation::code_type<sub_type>::type; \
-        auto &scalar = data.ref<type>(); \
+        using type = notation::code_sub_type<sub_type>::type; \
+        auto &scalar = element.template ref<type>(); \
         (void)(scalar); \
-        auto vector = data.at<type>(); \
+        auto vector = element.template at<type>(); \
         (void)(vector);
 
 #define DEFAULT_TYPE(codes) \
@@ -485,7 +460,7 @@ namespace ohm {
         Var(T &&t);
 
         explicit Var(void *ptr) {
-            this->operator=(notation::Scalar(ptr));
+            this->operator=(notation::ElementScalar(ptr));
         }
 
         Var &operator=(const Var &var) {
@@ -509,7 +484,21 @@ namespace ohm {
         operator=(T &&t) {
             using Element = typename notation::type_type<typename notation::remove_cr<T>::type>::type;
             // TODO: check if there is need to update new
-            m_var = Element::Make(std::forward<T>(t));
+            m_var = std::make_shared<Element>(std::forward<T>(t));
+            if (m_notifier) {
+                m_notifier(m_var);
+            }
+            return *this;
+        }
+
+        template<typename T>
+        typename std::enable_if<
+                !is_var_element<T>::value &&
+                std::is_base_of<notation::Element, typename notation::remove_cr<T>::type>::value
+                , Var>::type &
+        operator=(T &&t) {
+            using Element = typename notation::remove_cr<T>::type;
+            m_var = std::make_shared<Element>(std::forward<T>(t));
             if (m_notifier) {
                 m_notifier(m_var);
             }
@@ -545,9 +534,9 @@ namespace ohm {
             if (!m_var) {
                 m_var = notation::code_type<notation::type::Object>::type::Make();
             } else if (!m_var->is_object()) {
-                throw VarNotSupportSlice(m_var->code);
+                throw VarNotSupportSlice(m_var->type);
             }
-            auto &data = reinterpret_cast<notation::ElementObject *>(m_var.get())->data;
+            auto &data = reinterpret_cast<notation::ElementObject *>(m_var.get())->content;
             auto it = data.find(key);
             if (it == data.end()) {
                 notation::Element::weak storage = m_var;
@@ -555,7 +544,7 @@ namespace ohm {
                     auto shared_storage = storage.lock();
                     if (!shared_storage) return;
                     auto obj = reinterpret_cast<notation::ElementObject *>(shared_storage.get());
-                    obj->data[key] = std::move(var);
+                    obj->content[key] = std::move(var);
                 };
                 return Var(notifier);
             } else {
@@ -575,9 +564,9 @@ namespace ohm {
             if (!m_var) {
                 throw VarNotSupportSlice(notation::type::Undefined, key);
             } else if (!m_var->is_object()) {
-                throw VarNotSupportSlice(m_var->code);
+                throw VarNotSupportSlice(m_var->type);
             }
-            auto &data = reinterpret_cast<notation::ElementObject *>(m_var.get())->data;
+            auto &data = reinterpret_cast<notation::ElementObject *>(m_var.get())->content;
             auto it = data.find(key);
             if (it == data.end()) {
                 return Var();
@@ -605,13 +594,13 @@ namespace ohm {
             if (!m_var) {
                 throw VarNotSupportSlice(notation::type::Undefined, index);
             } else if (!m_var->is_array()) {
-                throw VarNotSupportSlice(m_var->code, index);
+                throw VarNotSupportSlice(m_var->type, index);
             }
-            auto &data = reinterpret_cast<notation::ElementArray *>(m_var.get())->data;
+            auto &data = reinterpret_cast<notation::ElementArray *>(m_var.get())->content;
             auto data_size = int64_t(data.size());
             auto fixed_index = index >= 0 ? index : index + data_size;
             if (fixed_index < 0 || fixed_index >= data_size) {
-                throw VarIndexOutOfRange(m_var->code, fixed_index, data.size());
+                throw VarIndexOutOfRange(m_var->type, fixed_index, data.size());
             }
             {
                 notation::Element::weak storage = m_var;
@@ -631,13 +620,13 @@ namespace ohm {
             if (!m_var) {
                 throw VarNotSupportSlice(notation::type::Undefined, index);
             } else if (!m_var->is_array()) {
-                throw VarNotSupportSlice(m_var->code, index);
+                throw VarNotSupportSlice(m_var->type, index);
             }
-            auto &data = reinterpret_cast<notation::ElementArray *>(m_var.get())->data;
+            auto &data = reinterpret_cast<notation::ElementArray *>(m_var.get())->content;
             auto data_size = int64_t(data.size());
             auto fixed_index = index >= 0 ? index : index + data_size;
             if (fixed_index < 0 || fixed_index >= data_size) {
-                throw VarIndexOutOfRange(m_var->code, fixed_index, data.size());
+                throw VarIndexOutOfRange(m_var->type, fixed_index, data.size());
             }
             auto &value = data.at(size_t(fixed_index));
             return Var(value);
@@ -658,7 +647,7 @@ namespace ohm {
         }
 
         notation::DataType type() const {
-            return m_var ? m_var->code : notation::type::Undefined;
+            return m_var ? m_var->type : notation::type::Undefined;
         }
 
         template<typename T, typename=typename std::enable_if<
@@ -671,27 +660,27 @@ namespace ohm {
             CASE(notation::type::None)
                 return false;
             CASE(notation::type::Boolean)
-                return data;
+                return content;
             CASE(notation::type::String)
-                return !data.empty();
+                return !content.empty();
             CASE(notation::type::Array)
-                return data.size();
+                return content.size();
             CASE(notation::type::Object)
-                return data.size();
+                return content.size();
             CASE(notation::type::Scalar)
-                SWITCH_TYPE(m_var->code)
+                SWITCH_TYPE(m_var->type)
                     CASE_TYPE_INTEGER(return bool(scalar))
                     CASE_TYPE_FLOOT(return scalar != 0)
                     CASE_TYPE_BOOL(return scalar.data)
                     CASE_TYPE_VOID(return false)
                     CASE_TYPE_CHAR(return bool(scalar))
                     CASE_TYPE_POINTER(return bool(scalar))
-                    CASE_TYPE_NOT_SUPPORTED(throw VarOperatorNotSupported(m_var->code, "bool()"))
+                    CASE_TYPE_NOT_SUPPORTED(throw VarOperatorNotSupported(m_var->type, "bool()"))
                 END_TYPE
             CASE(notation::type::Binary)
-                return data.size();
+                return content.size();
             CASE(notation::type::Vector)
-                return data.size();
+                return element.size();
             UNEXPECTED_END
         }
 
@@ -702,15 +691,15 @@ namespace ohm {
             CHECK(std::string(typeid(T).name()) + "()")
             SWITCH
             CASE(notation::type::Boolean)
-                return data ? 1 : 0;
+                return content ? 1 : 0;
             CASE(notation::type::String)
                 try {
-                    return notation::string2<T>(data);
+                    return notation::string2<T>(content);
                 } catch (const notation::String2Exception &e) {
                     throw VarException(e.what());
                 }
             CASE(notation::type::Scalar)
-                SWITCH_TYPE(m_var->code)
+                SWITCH_TYPE(m_var->type)
                     CASE_TYPE_INTEGER(return T(scalar))
                     CASE_TYPE_FLOOT(return T(T(scalar)))
                     CASE_TYPE_BOOL(return scalar.data ? 1 : 0)
@@ -729,9 +718,9 @@ namespace ohm {
             SWITCH
             CASE(notation::type::Vector)
                 auto wanted_type = notation::type::Vector | notation::type_code<T>::code;
-                if (m_var->code != wanted_type)
+                if (m_var->type != wanted_type)
                     throw VarOperatorNotSupported(type(), __op, { notation::type_string(wanted_type) });
-                return notation::Vector<T>(data);
+                return notation::Vector<T>(content);
             UNEXPECTED_END
         }
 
@@ -747,15 +736,15 @@ namespace ohm {
             CHECK("binary()")
             SWITCH
             CASE(notation::type::Binary)
-                return data;
+                return content;
             UNEXPECTED_END
         }
 
-        void append(Var var) {
+        void append(Var obj) {
             CHECK("append")
             SWITCH
             CASE(notation::type::Array)
-                data.push_back(var);
+                content.push_back(obj);
             END
         }
 
@@ -766,15 +755,15 @@ namespace ohm {
                 if (var.type() != notation::type::Array) {
                     throw VarOperatorParameterMismatch(this->type(), __op, 0, {notation::type::Array});
                 }
-                auto &arr = reinterpret_cast<notation::ElementArray *>(m_var.get())->data;
-                data.insert(data.end(), arr.begin(), arr.end());
+                auto &arr = reinterpret_cast<notation::ElementArray *>(m_var.get())->content;
+                content.insert(content.end(), arr.begin(), arr.end());
             CASE(notation::type::Object)
                 if (var.type() != notation::type::Object) {
                     throw VarOperatorParameterMismatch(this->type(), __op, 0, {notation::type::Object});
                 }
-                auto &obj = reinterpret_cast<notation::ElementObject *>(m_var.get())->data;
+                auto &obj = reinterpret_cast<notation::ElementObject *>(m_var.get())->content;
                 for (auto &pair : obj) {
-                    data[pair.first] = pair.second;
+                    content[pair.first] = pair.second;
                 }
             END
         }
@@ -783,11 +772,11 @@ namespace ohm {
             CHECK("resize")
             SWITCH
             CASE(notation::type::Array)
-                data.resize(size);
+                content.resize(size);
             CASE(notation::type::Binary)
-                data.resize(size);
+                content.resize(size);
             CASE(notation::type::Vector)
-                data.reverse(size * notation::sub_type_size(notation::type::SubType(m_var->code & 0xFF)));
+                element.resize(size);
             END
         }
 
@@ -795,13 +784,13 @@ namespace ohm {
             CHECK("size")
             SWITCH
             CASE(notation::type::Array)
-                return data.size();
+                return content.size();
             CASE(notation::type::Object)
-                return data.size();
+                return content.size();
             CASE(notation::type::Binary)
-                return data.size();
+                return content.size();
             CASE(notation::type::Vector)
-                return data.capacity() / notation::sub_type_size(notation::type::SubType(m_var->code & 0xFF));
+                return content.capacity() / notation::sub_type_size(notation::type::SubType(m_var->type & 0xFF));
             UNEXPECTED_END
         }
 
@@ -829,7 +818,8 @@ namespace ohm {
     } \
     case main_type: \
     { \
-        auto &data = __at<typename notation::code_type<main_type>::type>(m_var.get())->data;
+        auto &element = *static_cast<typename notation::code_type<main_type>::type*>(m_var.get()); \
+        auto &content = __at<typename notation::code_type<main_type>::type>(m_var.get())->content;
 
 
 #define ID_END \
@@ -842,27 +832,27 @@ namespace ohm {
             if (!m_var) {
                 _UNSAFE_RETURN(nullptr, 0)
             }
-            ID_SWITCH(m_var->code)
+            ID_SWITCH(m_var->type)
                 ID_DEFAULT
                     _UNSAFE_RETURN(nullptr, 0)
                 ID_CASE(notation::type::None)
                     _UNSAFE_RETURN(nullptr, 0)
                 ID_CASE(notation::type::Boolean)
-                    _UNSAFE_RETURN(&data, notation::element_size(data))
+                    _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::String)
-                    _UNSAFE_RETURN(&data, notation::element_size(data))
+                    _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::Array)
-                    _UNSAFE_RETURN(&data, notation::element_size(data))
+                    _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::Object)
-                    _UNSAFE_RETURN(&data, notation::element_size(data))
+                    _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::Binary)
-                    _UNSAFE_RETURN(&data, notation::element_size(data))
+                    _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::Scalar)
-                    SWITCH_TYPE(m_var->code)
+                    SWITCH_TYPE(m_var->type)
                         CASE_TYPE_ANY(_UNSAFE_RETURN(&scalar, notation::element_size(scalar)))
                     END_TYPE
                 ID_CASE(notation::type::Vector)
-                    _UNSAFE_RETURN(data.data(), data.capacity())
+                    _UNSAFE_RETURN(content.data(), content.capacity())
             ID_END
             _UNSAFE_RETURN(nullptr, 0)
 #undef _UNSAFE_RETURN
@@ -870,27 +860,27 @@ namespace ohm {
 
         void *id() {
             if (!m_var) return nullptr;
-            ID_SWITCH(m_var->code)
+            ID_SWITCH(m_var->type)
                 ID_DEFAULT
                     return nullptr;
                 ID_CASE(notation::type::None)
                     return nullptr;
                 ID_CASE(notation::type::Boolean)
-                    return &data;
+                    return &content;
                 ID_CASE(notation::type::String)
-                    return &data;
+                    return &content;
                 ID_CASE(notation::type::Array)
-                    return &data;
+                    return &content;
                 ID_CASE(notation::type::Object)
-                    return &data;
+                    return &content;
                 ID_CASE(notation::type::Binary)
-                    return &data;
+                    return &content;
                 ID_CASE(notation::type::Scalar)
-                    SWITCH_TYPE(m_var->code)
+                    SWITCH_TYPE(m_var->type)
                         CASE_TYPE_ANY(return &scalar);
                     END_TYPE
                 ID_CASE(notation::type::Vector)
-                    return &data;
+                    return &content;
             ID_END
             return nullptr;
         }
@@ -901,42 +891,42 @@ namespace ohm {
 
         std::string repr() const {
             if (!m_var) return "\"@undefined\"";
-            ID_SWITCH(m_var->code)
+            ID_SWITCH(m_var->type)
                 ID_DEFAULT
                     return "\"@" + notation::type_string(type()) + "\"";
                 ID_CASE(notation::type::None)
                     return "null";
                 ID_CASE(notation::type::Boolean)
-                    return data ? "true" : "false";
+                    return content ? "true" : "false";
                 ID_CASE(notation::type::String)
-                    return notation::repr(data);
+                    return notation::repr(content);
                 ID_CASE(notation::type::Array)
-                    return notation::repr(data);
+                    return notation::repr(content);
                 ID_CASE(notation::type::Object)
-                    return notation::repr(data);
+                    return notation::repr(content);
                 ID_CASE(notation::type::Scalar)
-                    SWITCH_TYPE(m_var->code)
+                    SWITCH_TYPE(m_var->type)
                         CASE_TYPE_INTEGER(return notation::repr(scalar))
                         CASE_TYPE_FLOOT(return notation::repr(scalar))
-                        CASE_TYPE_BOOL(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
-                        CASE_TYPE_VOID(return notation::repr(m_var->code, nullptr, 0))
-                        CASE_TYPE_CHAR(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
-                        CASE_TYPE_POINTER(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
-                        CASE_TYPE_NOT_SUPPORTED(return notation::repr(m_var->code, &scalar, notation::element_size(scalar)))
+                        CASE_TYPE_BOOL(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
+                        CASE_TYPE_VOID(return notation::repr(m_var->type, nullptr, 0))
+                        CASE_TYPE_CHAR(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
+                        CASE_TYPE_POINTER(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
+                        CASE_TYPE_NOT_SUPPORTED(return notation::repr(m_var->type, &scalar, notation::element_size(scalar)))
                     END_TYPE
                 ID_CASE(notation::type::Binary)
-                    return notation::repr(data);
+                    return notation::repr(content);
                 ID_CASE(notation::type::Vector)
-                    SWITCH_TYPE(m_var->code)
-                        CASE_TYPE_ANY(return notation::repr(vector, data.capacity() / sizeof(type)))
+                    SWITCH_TYPE(m_var->type)
+                        CASE_TYPE_ANY(return notation::repr(vector, element.size()))
                     END_TYPE
             ID_END
             return nullptr;
         }
 
         std::string str() const {
-            if (m_var && (m_var->code & 0xFF00) == notation::type::String) {
-                auto &data = __at<typename notation::code_type<notation::type::String>::type>(m_var.get())->data;
+            if (m_var && (m_var->type & 0xFF00) == notation::type::String) {
+                auto &data = __at<typename notation::code_type<notation::type::String>::type>(m_var.get())->content;
                 return data;
             }
             return repr();

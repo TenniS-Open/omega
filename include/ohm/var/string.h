@@ -15,12 +15,13 @@ namespace ohm {
     namespace notation {
         using String = std::string;
 
-        using StringBase = ElementBase<type::String, String>;
+        using StringBase = TrustElement<type::String, String>;
 
         template<>
-        struct type_code<std::string> {
+        struct type_code<String> {
             static const DataType code = type::String;
         };
+
         template<>
         struct code_type<type::String> {
             using type = StringBase;

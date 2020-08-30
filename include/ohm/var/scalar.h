@@ -9,108 +9,63 @@
 
 namespace ohm {
     namespace notation {
-        class Scalar {
-        public:
-            char data[16];
-
-            Scalar() { std::memset(data, 0, sizeof(data)); }
-
-            template<typename T, typename=typename std::enable_if<
-                    std::is_literal_type<T>::value &&
-                    sizeof(T) <= 16>::type>
-            Scalar(T t) { *reinterpret_cast<T *>(data) = t; }
-
-            template<typename T, typename=typename std::enable_if<
-                    std::is_literal_type<T>::value &&
-                    sizeof(T) <= 16>::type>
-            Scalar &operator=(T t) { *reinterpret_cast<T *>(data) = t; return *this; }
-
-            template<typename T, typename=typename std::enable_if<
-                    std::is_literal_type<T>::value &&
-                    sizeof(T) <= 16>::type>
-            operator T() const { return *reinterpret_cast<const T *>(data); }
-
-            template <typename T>
-            T *at() { return reinterpret_cast<T*>(data); }
-
-            template <typename T>
-            const T *at() const { return reinterpret_cast<const T*>(data); }
-
-            template <typename T>
-            T &ref() { return *reinterpret_cast<T*>(data); }
-
-            template <typename T>
-            const T &at() const { return *reinterpret_cast<T*>(data); }
-        };
-
-        namespace scalar {
-            /**
-             * Use Boolean because binary define must has 1 byte.
-             * Spicelly in std::vector<Boolean>
-             */
-            struct Boolean {
-            public:
-                using Type = uint8_t;
-                Type data;
-            };
-        }
-
-        namespace {
-            scalar::Boolean TRUE = {1};
-            scalar::Boolean FALSE = {0};
-        }
-
-        class ElementScalar : public Element {
+        class ElementScalar : public TypeElement<type::Scalar, placeholder<128>> {
         public:
             using self = ElementScalar;
-            using supper = Element;
+            using supper = TypeElement<type::Scalar, placeholder<128>>;
 
-            Scalar data;
+            ElementScalar() { std::memset(&content, 0, sizeof(content)); }
 
-            ElementScalar() : supper({type::Scalar}) {}
+            template<typename T, typename=typename std::enable_if<
+                    is_scalar_type<T>::value>::type>
+            ElementScalar(T t)
+                : supper(type::Scalar | sub_type_code<T>::code) {
+                *reinterpret_cast<T *>(&content) = t;
+            }
 
-            template<typename T>
-            ElementScalar(T t) : supper({type_code<T>::code}), data(t) {}
-
-            template<typename T>
+            template<typename T, typename=typename std::enable_if<
+                    is_scalar_type<T>::value>::type>
             ElementScalar &operator=(T t) {
-                static constexpr auto new_code = type_code<T>::code;
-                code = new_code;
-                data = t;
+                this->type = type::Scalar | sub_type_code<T>::code;
+                *reinterpret_cast<T *>(&content) = t;
                 return *this;
             }
 
-            template<typename T>
-            operator T() const { return *reinterpret_cast<T *>(data); }
+            template<typename T, typename=typename std::enable_if<
+                    is_scalar_type<T>::value>::type>
+            operator T() const {
+                /// no check here, cause it checked outside
+                return *reinterpret_cast<const T *>(&content);
+            }
 
-            static std::shared_ptr<ElementScalar> Make() {
+            template <typename T>
+            T *at() { return reinterpret_cast<T*>(&content); }
+
+            template <typename T>
+            const T *at() const { return reinterpret_cast<const T*>(&content); }
+
+            template <typename T>
+            T &ref() { return *reinterpret_cast<T*>(&content); }
+
+            template <typename T>
+            const T &at() const { return *reinterpret_cast<T*>(&content); }
+
+            static std::shared_ptr<self> Make() {
                 return std::make_shared<self>();
             }
 
             template<typename T>
-            static std::shared_ptr<ElementScalar> Make(T t) {
+            static typename std::enable_if<
+                    is_scalar_type<T>::value,
+                    std::shared_ptr<self>>::type
+            Make(T t) {
                 return std::make_shared<self>(t);
             }
         };
 
-        template<typename T>
-        class ScalarBase : public ElementScalar {
-        public:
-            using self = ScalarBase;
-            using supper = ElementScalar;
-
-            using Content = T;
-
-            ScalarBase() : supper() {}
-
-            template<typename S>
-            ScalarBase(S s) : supper(s) {}
-        };
-
 #define __DEFINE_TYPE_CODE(_type, _code) \
         template <> struct type_code<_type> { static const DataType code = type::Scalar | _code; }; \
-        template <> struct code_type<type::Scalar | _code> { using type = ElementScalar; }; \
-        template <> struct code_type<_code> { using type = _type; };
+        template <> struct code_type<type::Scalar | _code> { using type = ElementScalar; };
 
         __DEFINE_TYPE_CODE(int8_t, type::INT8)
         __DEFINE_TYPE_CODE(uint8_t, type::UINT8)
@@ -141,11 +96,6 @@ namespace ohm {
 
 #undef __DEFINE_TYPE_CODE
 
-        namespace scalar {
-            struct Void {
-            };
-        }
-
         template<>
         struct type_code<scalar::Void> {
             static const DataType code = type::Scalar | type::VOID;
@@ -158,7 +108,7 @@ namespace ohm {
 
         template<>
         struct code_type<type::Scalar | type::VOID> {
-            using type = ScalarBase<Empty>;
+            using type = ElementScalar;
         };
 
         template<>

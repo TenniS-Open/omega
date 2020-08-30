@@ -11,7 +11,7 @@ namespace ohm {
     namespace notation {
         using Array = std::vector<Element::shared>;
 
-        using ElementArray = ElementBase<type::Array, Array>;
+        using ElementArray = TrustElement<type::Array, Array>;
 
         template<>
         struct type_code<Array> {

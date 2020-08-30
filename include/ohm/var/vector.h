@@ -9,12 +9,13 @@
 
 namespace ohm {
     namespace notation {
-        class VectorData {
+        class VectorContent {
         public:
-            VectorData() = default;
+            VectorContent() = default;
 
-            explicit VectorData(size_t size)
-                    : m_data(new char[size], std::default_delete<char[]>()), m_size(size) {}
+            explicit VectorContent(size_t size)
+                    : m_data(new char[size], std::default_delete<char[]>()), m_size(size){
+            }
 
             void *data() { return m_data.get(); }
 
@@ -28,19 +29,7 @@ namespace ohm {
 
             size_t capacity() const { return m_size; }
 
-            template<typename T>
-            T *at() { return reinterpret_cast<T *>(data()); }
-
-            template<typename T>
-            const T *at() const { return reinterpret_cast<const T *>(data()); }
-
-            template<typename T>
-            T &ref() { return *reinterpret_cast<T *>(data()); }
-
-            template<typename T>
-            const T &at() const { return *reinterpret_cast<T *>(data()); }
-
-            void reverse(size_t size) {
+            void reserve(size_t size) {
                 std::shared_ptr<char> new_data(new char[size], std::default_delete<char[]>());
                 auto dst = this->m_data.get();
                 auto src = new_data.get();
@@ -59,19 +48,59 @@ namespace ohm {
             size_t m_size = 0;
         };
 
+        class ElementVector : public TypeElement<type::Vector, VectorContent> {
+        public:
+            using self = ElementVector;
+            using supper = TypeElement<type::Vector, VectorContent>;
+
+            ElementVector() = default;
+
+            explicit ElementVector(DataType type, size_t size)
+                    : supper(type::Vector | (type & 0xFF),
+                            VectorContent(size * sub_type_size(type::SubType(type & 0xFF)))) {}
+
+            void *data() { return content.data(); }
+
+            const void *data() const { return content.data(); }
+
+            template<typename T>
+            T *data() { return reinterpret_cast<T *>(data()); }
+
+            template<typename T>
+            const T *data() const { return reinterpret_cast<const T *>(data()); }
+
+            size_t capacity() const { return content.capacity(); }
+
+            template<typename T>
+            T *at() { return reinterpret_cast<T *>(data()); }
+
+            template<typename T>
+            const T *at() const { return reinterpret_cast<const T *>(data()); }
+
+            template<typename T>
+            T &ref() { return *reinterpret_cast<T *>(data()); }
+
+            template<typename T>
+            const T &at() const { return *reinterpret_cast<T *>(data()); }
+
+            void reserve(size_t size) {
+                content.reserve(size);
+            }
+
+            size_t size() const { return capacity() / sub_type_size(type::SubType(type & 0xFF)); }
+
+            void resize(size_t size) { reserve(size * sub_type_size(type::SubType(type & 0xFF))); }
+        };
+
         template<typename T>
-        class Vector : public VectorData {
+        class Vector : public ElementVector {
         public:
             using self = Vector;
-            using supper = VectorData;
-
-            using Content = T;
+            using supper = ElementVector;
 
             Vector() : supper() {}
 
-            explicit Vector(size_t size) : supper(element_size<T>() * size) {}
-
-            explicit Vector(const VectorData &data) : supper(data) {}
+            explicit Vector(size_t size) : supper(sub_type_code<T>::code, size) {}
 
             T *data() { return supper::data<T>(); }
 
@@ -91,15 +120,14 @@ namespace ohm {
                     !std::is_same<I, size_t>::value>::type>
             const T &operator[](I i) const { return this->operator[](size_t(i)); }
 
-            size_t size() const { capacity() / sizeof(T); }
-        };
+            size_t size() const { return capacity() / sizeof(T); }
 
-        template<typename T>
-        using ElementVector = ElementBase<type_code<Vector<T>>::code, Vector<T>>;
+            void resize(size_t size) { reserve(size * sizeof(T)); }
+        };
 
 #define __DEFINE_TYPE_CODE(_type, _code) \
         template <> struct type_code<Vector<_type>> { static const DataType code = type::Vector | _code; }; \
-        template <> struct code_type<type::Vector | _code> { using type = ElementVector<_type>; };
+        template <> struct code_type<type::Vector | _code> { using type = Vector<_type>; };
 
         __DEFINE_TYPE_CODE(int8_t, type::INT8)
         __DEFINE_TYPE_CODE(uint8_t, type::UINT8)
@@ -142,7 +170,7 @@ namespace ohm {
 
         template<>
         struct code_type<type::Vector | type::VOID> {
-            using type = ElementVector<Empty>;
+            using type = Vector<Empty>;
         };
 
         template<>

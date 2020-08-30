@@ -104,7 +104,7 @@ namespace ohm {
 #pragma push_macro("READ_TYPE")
 #define READ_TYPE(__type) \
         case __type: \
-            return Var(read<notation::code_type<__type>::type>(ctx, reader));
+            return Var(read<notation::code_sub_type<__type>::type>(ctx, reader));
 
             using namespace notation::type;
             switch (type & 0xff) {

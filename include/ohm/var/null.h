@@ -9,16 +9,14 @@
 
 namespace ohm {
     namespace notation {
-        class ElementNone : public Element {
+        class ElementNone : public TypeElement<type::None, Empty> {
         public:
             using self = ElementNone;
-            using supper = Element;
+            using supper = TypeElement<type::None, Empty>;
 
-			Empty data;    // for empty data size.
+            ElementNone() = default;
 
-            ElementNone() : supper({type::None}) {}
-
-            ElementNone(std::nullptr_t) : self() {}
+            explicit ElementNone(std::nullptr_t) : self() {}
 
             operator bool() const { return false; }
 

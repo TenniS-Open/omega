@@ -193,7 +193,7 @@ namespace ohm {
             return !operator==(lhs, rhs);
         }
 
-        using ElementBinary = ElementBase<type::Binary, Binary>;
+        using ElementBinary = TrustElement<type::Binary, Binary>;
 
         template<>
         struct type_code<Binary> {
