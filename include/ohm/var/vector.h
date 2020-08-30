@@ -178,7 +178,7 @@ namespace ohm {
 
         template<>
         struct code_type<type::Vector | type::VOID> {
-            using type = Vector<Empty>;
+            using type = ElementVector;
         };
 
         template<>

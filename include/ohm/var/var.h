@@ -924,7 +924,7 @@ namespace ohm {
                     return notation::repr(content);
                 ID_CASE(notation::type::Vector)
                     SWITCH_TYPE(m_var->type)
-                        CASE_TYPE_ANY(return notation::repr(vector, element->capacity() / sizeof(type)))
+                        CASE_TYPE_ANY(return notation::repr(vector, element.size()))
                     END_TYPE
             ID_END
             return nullptr;
