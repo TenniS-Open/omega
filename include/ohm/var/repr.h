@@ -61,11 +61,11 @@ namespace ohm {
             std::ostringstream oss;
             oss << "\"@" << type_string(code);
             if (data && size > 0) {
-                auto uint8_data = reinterpret_cast<const uint8_t *>(data);
+                auto int8_data = reinterpret_cast<const int8_t *>(data);
                 oss << "@0x";
                 oss << std::hex << std::setfill('0') << std::setw(2);
                 for (size_t i = 0; i < size; ++i) {
-                    oss << uint8_data[i];
+                    oss << int(int8_data[i]);
                 }
             }
             oss << "\"";

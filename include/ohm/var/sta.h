@@ -69,6 +69,7 @@ namespace ohm {
             auto size = read<int32_t>(ctx, reader);
             std::vector<char> buffer(size);
             read_buffer(ctx, buffer.data(), size, reader);
+            buffer.push_back('\0');
             return Var(std::string(buffer.data()));
         }
 
