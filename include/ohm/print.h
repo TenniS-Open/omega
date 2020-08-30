@@ -195,9 +195,9 @@ namespace ohm {
         return stream_print(out, sep2, args...);
     }
 
-    template<typename T, typename... Args>
+    template<typename T1, typename T2, typename... Args>
     inline std::ostream &
-    stream_print(std::ostream &out, const Sep &sep, const T &t1, const T &t2, const Args &...args) {
+    stream_print(std::ostream &out, const Sep &sep, const T1 &t1, const T2 &t2, const Args &...args) {
         if (sep.n == 0) return stream_print(out, t1, t2, args...);
         stream_print(out, t1);
         stream_print(out, sep.sep);
