@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <stack>
+#include <sstream>
 
 namespace ohm {
     namespace vario {

@@ -24,6 +24,7 @@
 
 #include <type_traits>
 #include <sstream>
+#include <functional>
 
 namespace ohm {
     template<typename T, typename=void>
@@ -44,6 +45,12 @@ namespace ohm {
             std::is_constructible<typename notation::type_type<
             typename notation::remove_cr<T>::type>::type, T>::value>::type> : public std::true_type {
     };
+
+    template <typename T>
+    inline constexpr bool _do_var_assignable();
+
+    template <typename T>
+    inline constexpr bool _do_var_convertible();
 
     template<typename T, typename K>
     T *__at(K &t) { return reinterpret_cast<T *>(&t); }
@@ -231,7 +238,8 @@ namespace ohm {
 
         // Var(notation::DataType code) : self(code2object(code)) {}
 
-        template <typename T, typename>
+        template <typename T, typename=typename std::enable_if<
+                _do_var_assignable<T>()>::type>
         Var(T &&t);
 
         explicit Var(void *ptr) {
@@ -590,7 +598,7 @@ namespace ohm {
             UNEXPECTED_END
         }
 
-        template<typename T, typename=typename std::enable_if<is_var_convertible<T>::value>::type>
+        template<typename T, typename=typename std::enable_if<_do_var_convertible<T>()>::type>
         operator T() const {
             return cpp<T>();
         }
@@ -738,9 +746,17 @@ namespace ohm {
                     std::is_same<const Var&, decltype(std::declval<Var>().operator=(std::declval<T>()))>::value
             >::type> : public std::true_type {
     };
+    template <typename T>
+    inline constexpr bool _do_var_assignable() {
+        return is_var_assignable<T>::value;
+    }
 
-    template<typename T, typename=typename std::enable_if<
-            is_var_assignable<T>::value>::type>
+    template <typename T>
+    inline constexpr bool _do_var_convertible() {
+        return is_var_convertible<T>::value;
+    }
+
+    template<typename T, typename>
     Var::Var(T &&t) {
         this->operator=(std::forward<T>(t));
     }

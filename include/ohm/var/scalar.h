@@ -6,6 +6,7 @@
 #define OMEGA_VAR_SCALAR_H
 
 #include "notation.h"
+#include <cstring>
 
 namespace ohm {
     namespace notation {
