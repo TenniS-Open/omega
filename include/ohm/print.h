@@ -239,7 +239,7 @@ namespace ohm {
 
     template<typename... Args>
     inline void println(std::ostream &stream, const Args &..._) {
-        stream_print(stream, sprint(sprint, _...), "\n");
+        stream_print(stream, sprint(_...), "\n");
         stream.flush();
     }
 
