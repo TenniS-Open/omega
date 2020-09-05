@@ -18,7 +18,7 @@ namespace ohm {
 
     inline struct tm time2tm(std::time_t from) {
         std::tm to = {0};
-#if OHM_PLATFORM_CC_MSVC
+#if OHM_PLATFORM_CC_MSVC || OHM_PLATFORM_CC_MINGW
         localtime_s(&to, &from);
 #else
         localtime_r(&from, &to);
