@@ -21,10 +21,10 @@ namespace ohm {
     namespace vario {
         inline Var read_var(Context &ctx, const VarReader &reader);
 
-        template <typename T>
+        template<typename T>
         inline T read(Context &ctx, const VarReader &reader) {
             T tmp;
-			constexpr auto size = notation::element_size<T>();
+            constexpr auto size = notation::element_size<T>();
             auto read = reader(&tmp, size);
             if (read != size) {
                 throw VarIOEndOfStream(ctx);
@@ -32,11 +32,11 @@ namespace ohm {
             return tmp;
         }
 
-        template <>
+        template<>
         inline void read<void>(Context &ctx, const VarReader &reader) {
         }
 
-        template <typename T>
+        template<typename T>
         inline T *read_buffer(Context &ctx, T *data, size_t wanted, const VarReader &reader) {
             auto size = notation::element_size<T>() * wanted;
             auto read = reader(data, size);
@@ -60,7 +60,7 @@ namespace ohm {
             return Var(b != 0);
         }
 
-        template <typename T, typename=typename std::enable_if<is_var_convertible<T>::value>::type>
+        template<typename T, typename=typename std::enable_if<is_var_convertible<T>::value>::type>
         inline T expect(Context &ctx, const std::string &expected, const Var &var) {
             try {
                 return T(var);
@@ -124,7 +124,8 @@ namespace ohm {
 
             using namespace notation::type;
             switch (type & 0xff) {
-                case VOID: return notation::scalar::Void();
+                case VOID:
+                    return notation::scalar::Void();
                 READ_TYPE(INT8)
                 READ_TYPE(UINT8)
                 READ_TYPE(INT16)
@@ -180,105 +181,98 @@ namespace ohm {
         }
     }
 
-    namespace {
-        class VarForwardReader {
-        public:
-            using self = VarForwardReader;
+    class VarForwardReader {
+    public:
+        using self = VarForwardReader;
 
-            VarForwardReader(const VarForwardReader &reader) = delete;
-            VarForwardReader &operator=(const VarForwardReader &reader) = delete;
+        VarForwardReader(const VarForwardReader &reader) = delete;
 
-            VarForwardReader(const VarReader& reader, size_t size)
-                : m_reader(reader)
-                , m_size(size)
-                , m_buffer(new char[size], std::default_delete<char[]>())
-                , m_buffered(0)
-                , m_read(0) {
-            }
+        VarForwardReader &operator=(const VarForwardReader &reader) = delete;
 
-            void rewind() {
-                m_read = 0;
-            }
+        VarForwardReader(const VarReader &reader, size_t size)
+                : m_reader(reader), m_size(size), m_buffer(new char[size], std::default_delete<char[]>()),
+                  m_buffered(0), m_read(0) {
+        }
 
-            size_t operator()(void *data, size_t size) const {
-                if (size == 0) return 0;
-                // check if use buffer and how many to use
-                size_t i = 0;   // this time read
-                auto bytes = reinterpret_cast<uint8_t *>(data);
-                if (m_read < m_size) {
-                    // here is each position
-                    auto wanted = m_read + size;
-                    // m_read, wanted, m_buffered, m_size
-                    // or m_read, m_buffered, wanted, m_size
-                    // or m_read, m_buffered, m_size, wanted
-                    if (m_buffered >= wanted) {
-                        json::datacopy(&bytes[i], &m_buffer.get()[m_read], size);
-                        i += size;
-                    } else if (m_size >= wanted) {
-                        auto ready = m_buffered - m_read;
-                        auto more = wanted - m_buffered;
-                        json::datacopy(&bytes[i], &m_buffer.get()[m_read], ready);
-                        i += ready;
-                        auto tmp = m_reader(&m_buffer.get()[m_buffered], more);
-                        json::datacopy(&bytes[i], &m_buffer.get()[m_buffered], more);
-                        m_buffered += tmp;
-                        i += tmp;
-                    } else {
-                        if (m_buffered < m_size) {
-                            auto more = m_size - m_buffered;
-                            m_buffered += m_reader(&m_buffer.get()[m_buffered], more);
-                        }
-                        auto ready = m_buffered - m_read;
-                        auto last = wanted - m_buffered;
-                        json::datacopy(&bytes[i], &m_buffer.get()[m_read], ready);
-                        i += ready;
-                        i += m_reader(&bytes[i], last);
-                    }
+        void rewind() {
+            m_read = 0;
+        }
+
+        size_t operator()(void *data, size_t size) const {
+            if (size == 0) return 0;
+            // check if use buffer and how many to use
+            size_t i = 0;   // this time read
+            auto bytes = reinterpret_cast<uint8_t *>(data);
+            if (m_read < m_size) {
+                // here is each position
+                auto wanted = m_read + size;
+                // m_read, wanted, m_buffered, m_size
+                // or m_read, m_buffered, wanted, m_size
+                // or m_read, m_buffered, m_size, wanted
+                if (m_buffered >= wanted) {
+                    json::datacopy(&bytes[i], &m_buffer.get()[m_read], size);
+                    i += size;
+                } else if (m_size >= wanted) {
+                    auto ready = m_buffered - m_read;
+                    auto more = wanted - m_buffered;
+                    json::datacopy(&bytes[i], &m_buffer.get()[m_read], ready);
+                    i += ready;
+                    auto tmp = m_reader(&m_buffer.get()[m_buffered], more);
+                    json::datacopy(&bytes[i], &m_buffer.get()[m_buffered], more);
+                    m_buffered += tmp;
+                    i += tmp;
                 } else {
-                    i = m_reader(data, size);
+                    if (m_buffered < m_size) {
+                        auto more = m_size - m_buffered;
+                        m_buffered += m_reader(&m_buffer.get()[m_buffered], more);
+                    }
+                    auto ready = m_buffered - m_read;
+                    auto last = wanted - m_buffered;
+                    json::datacopy(&bytes[i], &m_buffer.get()[m_read], ready);
+                    i += ready;
+                    i += m_reader(&bytes[i], last);
                 }
-                m_read += i;
-                return i;
+            } else {
+                i = m_reader(data, size);
             }
+            m_read += i;
+            return i;
+        }
 
-        private:
-            VarReader m_reader;
-            size_t m_size;
+    private:
+        VarReader m_reader;
+        size_t m_size;
 
-            mutable std::shared_ptr<char> m_buffer;
-            mutable size_t m_buffered;
+        mutable std::shared_ptr<char> m_buffer;
+        mutable size_t m_buffered;
 
-            mutable size_t m_read = 0;
-        };
+        mutable size_t m_read = 0;
+    };
 
-        class VarMemoryReader {
-        public:
-            using self = VarMemoryReader;
-            using byte = uint8_t;
+    class VarMemoryReader {
+    public:
+        using self = VarMemoryReader;
+        using byte = uint8_t;
 
-            explicit VarMemoryReader(const void *data, size_t size)
-                : m_data(reinterpret_cast<const byte *>(data))
-                , m_size(size)
-                , m_read(0) {}
+        explicit VarMemoryReader(const void *data, size_t size)
+                : m_data(reinterpret_cast<const byte *>(data)), m_size(size), m_read(0) {}
 
-            void rewind() {
-                m_read = 0;
-            }
+        void rewind() {
+            m_read = 0;
+        }
 
-            size_t operator()(void *data, size_t size) const {
-                auto ready = m_read + size > m_size ? m_size - m_read : size;
-                json::datacopy(data, &m_data[m_read], ready);
-                m_read += ready;
-                return ready;
-            }
-        private:
-            const byte *m_data;
-            size_t m_size;
-            mutable size_t m_read = 0;
-        };
+        size_t operator()(void *data, size_t size) const {
+            auto ready = m_read + size > m_size ? m_size - m_read : size;
+            json::datacopy(data, &m_data[m_read], ready);
+            m_read += ready;
+            return ready;
+        }
 
-
-    }
+    private:
+        const byte *m_data;
+        size_t m_size;
+        mutable size_t m_read = 0;
+    };
 
     namespace var {
         inline Var read(const VarReader &reader, VarFormat format = VarBinary, bool read_magic = false) {
@@ -304,7 +298,7 @@ namespace ohm {
             vario::Context ctx;
             ctx.push("<>");
             VarForwardReader _forward(reader, 8);
-            auto forward = [&](void *data, size_t size) -> size_t {
+            auto forward = [&_forward](void *data, size_t size) -> size_t {
                 return _forward(data, size);
             };
             int32_t fake = 0, magic = 0;
