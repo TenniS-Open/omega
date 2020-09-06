@@ -8,6 +8,7 @@
 #include "istream.h"
 #include "ostream.h"
 #include "parser.h"
+#include "../filesys.h"
 
 namespace ohm {
     namespace var {
@@ -19,6 +20,8 @@ namespace ohm {
          * @notice it throws VarIOException if file format has not recognized.
          */
         inline Var readf(const VarReader &reader, const std::string &sysroot = "") {
+            ohm_cd(sysroot);
+
             vario::Context ctx;
             ctx.push("<>");
             VarForwardReader _forward(reader, 8);
@@ -60,13 +63,13 @@ namespace ohm {
             std::ifstream f(filename, std::ios::binary);
             if (!f.is_open()) throw VarFileNotFound(filename);
 
-            /// todo: get sysroot
+            auto sysroot = cut_path_tail(filename);
 
             auto reader = [&](void *data, size_t size) -> size_t {
                 f.read(reinterpret_cast<char *>(data), size);
                 return f.gcount();
             };
-            return readf(reader);
+            return readf(reader, sysroot);
         }
 
         /**

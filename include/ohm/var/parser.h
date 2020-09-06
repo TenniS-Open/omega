@@ -8,6 +8,8 @@
 #include "var.h"
 #include "context.h"
 #include "stream.h"
+#include "packer.h"
+
 #include <iostream>
 
 namespace ohm {
@@ -288,19 +290,47 @@ namespace ohm {
             return std::move(value);
         }
 
-        inline Var parse_sta_string(Context &ctx, json_iterator &beg) {
-            auto str = parse_string(ctx, beg);
-            return str; // no sta string support
-//            if (str.empty() || str[0] != '@') return str;
-//            auto key_args = Split(str, '@');
-//            auto &key = key_args[1];
-//            auto args = std::vector<std::string>(key_args.begin() + 1, key_args.end());
-//            auto commond = registered_command(key);
-//            if (commond == nullptr) return str;
-//            return commond(args);
+        using command_handler = std::function<Var(const Context &ctx, const std::vector<std::string> &args)>;
+
+        static command_handler registered_command(const std::string &command) {
+            static std::unordered_map<std::string, command_handler> command_map = {
+                    {"date", pack_date},
+                    {"time", pack_time},
+                    {"datetime", pack_datetime},
+                    {"nil", pack_nil},
+                    {"binary", pack_error},
+                    {"file", pack_file},
+            };
+            auto it = command_map.find(command);
+            if (it == command_map.end()) return nullptr;
+            return it->second;
         }
 
-        /// TODO: add bool support
+        inline std::vector<std::string> split(const std::string &str, char ch, size_t _size = 2) {
+            std::vector<std::string> result;
+            std::string::size_type left = 0, right;
+
+            result.reserve(_size);
+            while (true) {
+                right = str.find(ch, left);
+                result.push_back(str.substr(left, right == std::string::npos ? std::string::npos : right - left));
+                if (right == std::string::npos) break;
+                left = right + 1;
+            }
+            return std::move(result);
+        }
+
+        inline Var parse_sta_string(Context &ctx, json_iterator &beg) {
+            auto str = parse_string(ctx, beg);
+            if (str.empty() || str[0] != '@') return str;
+            auto key_args = split(str, '@', 2);
+            auto &key = key_args[1];
+            auto args = std::vector<std::string>(key_args.begin() + 1, key_args.end());
+            auto commond = registered_command(key);
+            if (commond == nullptr) return str;
+            return commond(ctx, args);
+        }
+
         inline Var parse_value(Context &ctx, json_iterator &beg) {
             beg = jump_space(beg);
             if (beg == beg.end()) throw VarIOExcpetion(ctx, "syntax error: converting empty json");
@@ -338,7 +368,7 @@ namespace ohm {
                     size += read;
                 }
             }
-            json_iterator it(buffer.data(), buffer.size() - 1);
+            json_iterator it(buffer.data(), int(buffer.size()) - 1);
             return parse_value(ctx, it);
         }
 
