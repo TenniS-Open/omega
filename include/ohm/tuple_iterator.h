@@ -238,8 +238,6 @@ namespace ohm {
                                      G(5), G(6), G(7), G(8), G(9));
     }
 
-#undef TUPLE_START_VALUE
-#undef G
 #pragma pop_macro("TUPLE_FORWARD_START_VALUE")
 #pragma pop_macro("TUPLE_START_VALUE")
 #pragma pop_macro("G")
