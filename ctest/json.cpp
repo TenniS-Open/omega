@@ -8,6 +8,7 @@
 class A : public ohm::JSONObject {
 public:
     using self = A;
+    JSONField(self, ohm::Var, o) = "undefined";
     JSONField(self, int, a, false) = 6;
     JSONField(self, float, b) = 8;
     JSONField(self, std::string, c) = "test";
@@ -19,18 +20,18 @@ public:
 };
 
 int main() {
-    auto json = R"({"b":1.2, "c": "hello", "d": 1231})";
+    auto json = R"({"b":1.2, "c": "hello", "d": 1231, "o": {}})";
     auto obj = ohm::json::from_string(json);
 
     ohm::println(json);
 
     A a;
 
-    ohm::println(ohm::sep(", "), a.a, a.b, a.c, a.d, a.e, a.f);
+    ohm::println(ohm::sep(", "), a.a, a.b, a.c, a.d, a.e, a.f, a.o);
 
     a.parse(obj);
 
-    ohm::println(ohm::sep(", "), a.a, a.b, a.c, a.d, a.e, a.f);
+    ohm::println(ohm::sep(", "), a.a, a.b, a.c, a.d, a.e, a.f, a.o);
 
     return 0;
 }

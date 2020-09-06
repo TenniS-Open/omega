@@ -122,11 +122,20 @@ namespace ohm {
             };
 
             template<typename T>
+            class _parser<T, typename std::enable_if<std::is_same<T, Var>::value>::type> {
+            public:
+                static T parse(const Var &obj) {
+                    return obj;
+                }
+            };
+
+            template<typename T>
             struct is_Var_scalar {
                 static constexpr bool value = std::is_integral<T>::value
                                               || std::is_floating_point<T>::value
                                               || std::is_same<T, std::string>::value
-                                              || std::is_same<T, Binary>::value;
+                                              || std::is_same<T, Binary>::value
+                                              || std::is_same<T, Var>::value;
             };
 
             template<typename T>
@@ -203,6 +212,25 @@ namespace ohm {
 
             private:
                 std::string m_name;
+                T *m_value;
+            };
+
+            template<typename T>
+            class ParserType<T, typename std::enable_if<
+                    std::is_same<T, Var>::value>::type>
+                    : public JSONBase {
+            public:
+                explicit ParserType(T *value)
+                        : m_value(value) {}
+
+                explicit ParserType(const std::string &, T *value)
+                        : m_value(value) {}
+
+                void parse(const Var &obj) override {
+                    *m_value = obj;
+                }
+
+            private:
                 T *m_value;
             };
 
