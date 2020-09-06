@@ -29,11 +29,8 @@
 #define GETCWD(buffer, length) ::_getcwd((buffer), (length))
 #define CHDIR(path) ::_chdir(path)
 
-#include <Windows.h>
+#include "sys/windows.h"
 #include <sys/stat.h>
-#if defined(VOID)
-#undef VOID
-#endif
 
 #elif  OHM_PLATFORM_OS_LINUX || OHM_PLATFORM_OS_MAC || OHM_PLATFORM_OS_IOS
 
