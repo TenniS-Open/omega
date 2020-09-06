@@ -120,42 +120,26 @@ namespace ohm {
             }
             return writen;
         }
-
-        inline size_t write_json(const Var &var, const VarWriter &writer) {
-            auto body = var.repr();
-            return writer(body.data(), body.size());
-        }
     }
 
     namespace var {
-        size_t write(const Var &var, const VarWriter &writer, VarFormat format = VarBinary, bool write_magic = false) {
+        /**
+         * write binary format into stream, chose to write magic number or not
+         * @param var var ready to write
+         * @param writer write stream
+         * @param write_magic if write magic number
+         * @return number of writen bytes
+         */
+        size_t write(const Var &var, const VarWriter &writer, bool write_magic = false) {
             size_t writen = 0;
-            if (format == VarBinary) {
-                if (write_magic) {
-                    uint32_t fake = 0;
-                    uint32_t magic = var_magic();
-                    writen += vario::write_var_body(fake, writer);
-                    writen += vario::write_var_body(magic, writer);
-                }
-                writen += vario::write_var(var, writer);
-                return writen;
-            } else {
-                return vario::write_json(var, writer);
+            if (write_magic) {
+                uint32_t fake = 0;
+                uint32_t magic = var_magic();
+                writen += vario::write_var_body(fake, writer);
+                writen += vario::write_var_body(magic, writer);
             }
-        }
-
-        inline size_t writef(const Var &var, const VarWriter &writer, VarFormat format=VarBinary) {
-            return write(var, writer, format, true);
-        }
-
-        inline size_t writef(const Var &var, const std::string &filename, VarFormat format=VarBinary) {
-            std::ofstream f(filename, std::ios::binary);
-            auto writer = [&](const void *data, size_t size) -> size_t {
-                if (!f.is_open()) return false;
-                f.write(reinterpret_cast<const char *>(data), size);
-                return size;
-            };
-            return writef(var, writer, format);
+            writen += vario::write_var(var, writer);
+            return writen;
         }
     }
 }

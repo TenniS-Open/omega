@@ -2,24 +2,17 @@
 // Created by kier on 2020/8/25.
 //
 
-#ifndef OMEGA_VAR_JSON_H
-#define OMEGA_VAR_JSON_H
+#ifndef OMEGA_VAR_PARSER_H
+#define OMEGA_VAR_PARSER_H
 
 #include "var.h"
 #include "context.h"
 #include "stream.h"
+#include <iostream>
 
 namespace ohm {
-    namespace json {
+    namespace parser {
         using vario::Context;
-
-        inline void *datacopy(void *dst, const void *src, size_t n) {
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-            return memcpy_s(dst, n, src, n);
-#else
-            return memcpy(dst, src, n);
-#endif
-        }
 
         class json_iterator {
         public:
@@ -348,7 +341,12 @@ namespace ohm {
             json_iterator it(buffer.data(), buffer.size() - 1);
             return parse_value(ctx, it);
         }
+
+        inline size_t write_json(const Var &var, const VarWriter &writer) {
+            auto body = var.repr();
+            return writer(body.data(), body.size());
+        }
     }
 }
 
-#endif //OMEGA_VAR_JSON_H
+#endif //OMEGA_VAR_PARSER_H

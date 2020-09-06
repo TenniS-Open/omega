@@ -17,17 +17,17 @@ string := <var:size><byte*int($size)>
 boolean := <byte>
 array := <var:size><var*int($size)>
 object := <var:size><[<var:key><var:value>]*int($size)>
-repeat{sub} := <var:size><byte*type_bytes($sub)*int($size)>
+vector{sub} := <var:size><byte*type_bytes($sub)*int($size)>
 binary := <var:size><byte*int($size)>
 element{code} := switch(code & 0xff00) begin
-    0 -> null
-    0x0100 -> scalar{code & 0xff}
-    0x0200 -> string
-    0x0300 -> boolean
-    0x0400 -> array
-    0x0500 -> object
-    0x0600 -> repeat{code & 0xff}
-    0x0700 -> binary
+    0x0100 -> null
+    0x0200 -> scalar{code & 0xff}
+    0x0300 -> string
+    0x0400 -> boolean
+    0x0500 -> array
+    0x0600 -> object
+    0x0700 -> vector{code & 0xff}
+    0x0800 -> binary
     0xff00 -> undefined
 end
 var := <int16:code><element{code}:data>
@@ -57,6 +57,14 @@ namespace ohm {
         return 0x19900714;
     }
 
+    inline void *datacopy(void *dst, const void *src, size_t n) {
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+        return memcpy_s(dst, n, src, n);
+#else
+        return memcpy(dst, src, n);
+#endif
+    }
+
     class VarIOExcpetion : public std::logic_error {
     public:
         using self = VarIOExcpetion;
@@ -70,6 +78,21 @@ namespace ohm {
         static std::string Message(const std::string &ctx, const std::string &msg) {
             std::ostringstream oss;
             oss << "While import " << ctx + ", got exception: " << msg;
+            return oss.str();
+        }
+    };
+
+    class VarFileNotFound : public VarIOExcpetion {
+    public:
+        using self = VarFileNotFound;
+        using supper = VarIOExcpetion;
+
+        explicit VarFileNotFound(const std::string &filepath)
+            : supper(Message(filepath)) {}
+
+        static std::string Message(const std::string &filepath) {
+            std::ostringstream oss;
+            oss << "File not found or can not access with path: \"" << filepath << "\"";
             return oss.str();
         }
     };
