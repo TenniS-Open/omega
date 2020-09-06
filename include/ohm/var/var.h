@@ -590,11 +590,25 @@ namespace ohm {
             UNEXPECTED_END
         }
 
-        bool has(const std::string &key) {
+        bool has(const std::string &key) const {
             CHECK("size")
             SWITCH
             CASE(notation::type::Object)
                 return content.find(key) != content.end();
+            UNEXPECTED_END
+        }
+
+        std::vector<std::string> keys() const {
+            CHECK("keys")
+            SWITCH
+            CASE(notation::type::Object)
+                std::vector<std::string> result;
+                result.reserve(content.size());
+                for (auto &pair : content) {
+                    if (pair.second == nullptr) continue;
+                    result.emplace_back(pair.first);
+                }
+                return result;
             UNEXPECTED_END
         }
 
