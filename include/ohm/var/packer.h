@@ -10,6 +10,7 @@
 #include "context.h"
 #include "stream.h"
 #include "../print.h"
+#include <fstream>
 
 namespace ohm {
     namespace parser {

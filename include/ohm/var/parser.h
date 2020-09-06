@@ -9,6 +9,7 @@
 #include "context.h"
 #include "stream.h"
 #include "packer.h"
+#include "istream.h"
 
 #include <iostream>
 
@@ -375,6 +376,17 @@ namespace ohm {
         inline size_t write_json(const Var &var, const VarWriter &writer) {
             auto body = var.repr();
             return writer(body.data(), body.size());
+        }
+
+        inline Var from_string(const std::string &str) {
+            Context ctx;
+            ctx.push("<>");
+            auto c_str = str.c_str();
+            return read_json(ctx, VarMemoryReader(c_str, str.length() + 1));
+        }
+
+        inline std::string to_string(const Var &var) {
+            return var.repr();
         }
     }
 }

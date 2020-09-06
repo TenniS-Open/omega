@@ -14,10 +14,18 @@
 #endif
 
 namespace ohm {
-    class EjectionException : public std::logic_error {
+    class Exception : public std::logic_error {
+    public:
+        using self = Exception;
+        using supper = std::logic_error;
+
+        explicit Exception(const std::string &msg) : supper(msg) {}
+    };
+
+    class EjectionException : public Exception {
     public:
         using self = EjectionException;
-        using supper = std::logic_error;
+        using supper = Exception;
 
         explicit EjectionException(const std::string &msg) : supper(msg) {}
     };
