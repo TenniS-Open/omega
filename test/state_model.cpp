@@ -19,8 +19,6 @@ int main() {
 
     cv::VideoCapture capture;
 
-    // state: 1-待机， 2-播放，3-暂停
-    // action: 1-开机，2-播放/暂停，3-停止
     enum VIDEO_STATE {
         STATE_STAY = 1,
         STATE_PLAY = 2,
