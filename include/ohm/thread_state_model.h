@@ -33,29 +33,6 @@ namespace ohm {
             std::shared_ptr<std::unique_lock<MT>> _lock;
         };
 
-        template<typename T>
-        class LockArgsEmitter;
-
-        template<typename... Args>
-        class LockArgsEmitter<StateCode(Args...)> {
-        public:
-            using Emitter = std::function<void(Args...)>;
-
-            LockArgsEmitter(std::mutex *_mutex,
-                            Emitter emitter)
-                    : m_mutex(_mutex), m_emitter(std::move(emitter)) {}
-
-            void operator()(Args ...args) const {
-                UniqueLock<std::mutex> _lock(m_mutex);
-                m_emitter(pass_value<Args>(args)...);
-            }
-
-        private:
-            mutable std::mutex *m_mutex;
-            mutable Emitter m_emitter;
-        };
-
-
         /**
          * If event_lock is ture, he event should emit in single thread in same time,
          *     or use mute to prevent that.
@@ -143,12 +120,11 @@ namespace ohm {
              * @param state the current state when event emitted
              * @param event the emitted event
              * @param next the state will change to the value of next
-             * @return the event emitter, equal to event(event)
              * @note The `next` should return STATE_STILL if state has not changed.
              * @note If `next` return same state to now state, the state's enter and leaving function will also be modified.
              */
-            std::function<void()> transfer(StateCode state, EventCode event, StateCode next) {
-                return transfer(state, event, [next]() { return next; });
+            void transit(StateCode state, EventCode event, StateCode next) {
+                transit(state, event, [next]() { return next; });
             }
 
             /**
@@ -158,13 +134,12 @@ namespace ohm {
              * @param event the emitted event
              * @param next the state will change to the return value of next
              * @param action transition function
-             * @return the event emitter, equal to event(event)
              * @note The `next` should return STATE_STILL if state has not changed.
              * @note If `next` return same state to now state, the state's enter and leaving function will also be modified.
              */
-            std::function<void()> transfer(StateCode state, EventCode event, StateCode next,
+            void transit(StateCode state, EventCode event, StateCode next,
                                            const VoidF &action) {
-                return transfer(state, event, [action, next]() {
+                transit(state, event, [action, next]() {
                     action();
                     return next;
                 });
@@ -176,40 +151,56 @@ namespace ohm {
              * @param state the current state when event emitted
              * @param event the emitted event
              * @param next the transition function, the state will change to the return value of next
-             * @return the event emitter, equal to event(event)
              * @note The `next` should return STATE_STILL if state has not changed.
              * @note If `next` return same state to now state, the state's enter and leaving function will also be modified.
              */
-            std::function<void()> transfer(StateCode state, EventCode event, const Transition &next) {
+            void transit(StateCode state, EventCode event, const Transition &next) {
                 // state should not be STATE_STILL or STATE_STOP
                 auto key = std::make_tuple(state, event);
                 m_transition[key] = next;
-                return [this, event]() { this->event(event); };
+            }
+
+            /**
+             * @tparam Args means event parameters
+             * @param event event's code
+             * @return event object
+             * @note the return value would be invalid after this StateModel freed.
+             */
+            template<typename... Args>
+            Event<Args...> new_event(EventCode event) {
+                return Event<Args...>(event, [this, event](Args... args) {
+                    this->event<Args...>(event, pass_value<Args>(args)...);
+                });
+            }
+
+            /**
+             * Same as `transit(state, event.code(), next)`.
+             * @param state the current state when event emitted
+             * @param event the emitted event
+             * @param next the transition function, the state will change to the return value of next
+             */
+            void transit(StateCode state, const Event<> &event,
+                         const std::function<StateCode()> &next) {
+                transit(state, event.code(), next);
             }
 
             /**
              * Set the transition function when emit event in `state`.
              * After transition function, state will change to the return value of next.
-             * @tparam T transition function type, must be StateCode(...)
+             * @tparam FUNC transition function type, must be StateCode(Args...)
+             * @tparam Args transition function parameters' type
              * @param state the current state when event emitted
+             * @param event the emitted event
              * @param next the transition function, the state will change to the return value of next
-             * @return the event emitter, the parameters should parse to function `next`
              * @note there is no event code set, because the emitter should parse parameters
              */
-            template<typename T, typename = typename std::enable_if<
-                    std::is_function<T>::value &&
-                    std::is_same<typename return_type<T>::type, StateCode>::value>::type>
-            std::function<typename void_function<T>::type>
-            transfer(StateCode state,
-                     const std::function<T> &next) {
-                // state should not be STATE_STILL or STATE_STOP
-                using ThisEmitter = ArgsEmitter<T>;
-                using LockEmitter = LockArgsEmitter<T>;
-                return LockEmitter(m_mutex_event.get(), ThisEmitter(
-                        [this, state] {
-                            // return true for emit, false for ignoring this emit
-                            return m_state == state;
-                        },
+            template<typename FUNC, typename... Args,
+                    typename=typename std::enable_if<
+                            std::is_constructible<std::function<StateCode(Args...)>, FUNC>::value>::type>
+            void transit(StateCode state, const Event<Args...> &event,
+                         const FUNC &next) {
+                using ThisEmitter = ArgsEmitter<StateCode(Args...)>;
+                auto emitter = std::make_shared<ThisEmitter>(
                         next,
                         [this]() {
                             this->before();
@@ -217,7 +208,32 @@ namespace ohm {
                         [this](StateCode state) {
                             this->after(state);
                         }
-                ));
+                );
+                auto key = std::make_tuple(state, event.code());
+                m_args_transition[key] = emitter;
+            }
+
+            /**
+             * same as call event's emit method
+             * @tparam EventArgs tell event type
+             * @tparam Args event parameters' type
+             * @param obj event
+             * @param args event parameters
+             */
+            template <typename... EventArgs, typename... Args,
+                    typename=typename std::enable_if<
+                    std::is_same<void,
+                            decltype(std::declval<Event<EventArgs...>>().emit(std::declval<Args>()...))>::value>::type>
+            void event(const Event<EventArgs...> &event, Args... args) {
+                this->event(event.code(), pass_value(args)...);
+            }
+
+            /**
+             * Same as this->event(event.code())
+             * @param event emitted event
+             */
+            void event(const Event<> &event) {
+                this->event(event.code());
             }
 
             /**
@@ -254,6 +270,24 @@ namespace ohm {
             }
 
         private:
+            template <typename... Args>
+            void event(EventCode code, Args... args) {
+                UniqueLock<std::mutex> _lock(m_mutex_event.get());
+
+                auto key = std::make_tuple(m_state.load(), code);
+                auto it = m_args_transition.find(key);
+                if (it == m_args_transition.end()) return;
+
+                using ThisEmitter = ArgsEmitter<StateCode(Args...)>;
+
+                auto emitter = dynamic_cast<ThisEmitter*>(it->second.get());
+                if (emitter == nullptr) {
+                    throw StateModelException("The transition function does not match: " + classname<StateCode(Args...)>());
+                }
+
+                emitter->emit(pass_value<Args>(args)...);
+            }
+
             void before() {
             }
 
@@ -296,6 +330,8 @@ namespace ohm {
             std::map<std::tuple<StateCode, EventCode>, Transition> m_transition;
             std::map<StateCode, VoidF> m_enter;
             std::map<StateCode, VoidF> m_leave;
+
+            std::map<std::tuple<StateCode, EventCode>, std::shared_ptr<Emitter>> m_args_transition;
 
             std::shared_ptr<std::mutex> m_mutex_event;
 
