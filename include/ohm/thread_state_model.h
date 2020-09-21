@@ -39,6 +39,7 @@ namespace ohm {
          * else event can emit in multi thread with mutex cost.
          * Different with StateModel,
          * ThreadStateModel call loop to register action which would done in other thread automatically.
+         * Remind to kill model firstly before any loop action could be active.
          */
         class ThreadStateModel {
         public:
@@ -59,15 +60,7 @@ namespace ohm {
             }
 
             ~ThreadStateModel() {
-                {
-                    UniqueLock<std::mutex> _lock(m_mutex_event.get());
-                    if (state() != STATE_DEAD) {
-                        after(STATE_DEAD);
-                    }
-                }
-                if (m_thread_backend) {
-                    m_thread_backend->join();
-                }
+                this->kill();
             }
 
             /**
@@ -85,15 +78,17 @@ namespace ohm {
              */
             void event(EventCode code) {
                 UniqueLock<std::mutex> _lock(m_mutex_event.get());
-                StateCode state = STATE_STILL;
-                this->before();
-                After _after([this, &state]() {
-                    this->after(state);
-                });
                 auto key = std::make_tuple(m_state.load(), code);
                 auto it = m_transition.find(key);
                 if (it == m_transition.end()) return;
-                state = it->second();
+                {
+                    StateCode state = STATE_STILL;
+                    this->before();
+                    After _after([this, &state]() {
+                        this->after(state);
+                    });
+                    state = it->second();
+                }
             }
 
             /**
@@ -161,19 +156,6 @@ namespace ohm {
             }
 
             /**
-             * @tparam Args means event parameters
-             * @param event event's code
-             * @return event object
-             * @note the return value would be invalid after this StateModel freed.
-             */
-            template<typename... Args>
-            Event<Args...> new_event(EventCode event) {
-                return Event<Args...>(event, [this, event](Args... args) {
-                    this->event<Args...>(event, pass_value<Args>(args)...);
-                });
-            }
-
-            /**
              * Same as `transit(state, event.code(), next)`.
              * @param state the current state when event emitted
              * @param event the emitted event
@@ -200,15 +182,7 @@ namespace ohm {
             void transit(StateCode state, const Event<Args...> &event,
                          const FUNC &next) {
                 using ThisEmitter = ArgsEmitter<StateCode(Args...)>;
-                auto emitter = std::make_shared<ThisEmitter>(
-                        next,
-                        [this]() {
-                            this->before();
-                        },
-                        [this](StateCode state) {
-                            this->after(state);
-                        }
-                );
+                auto emitter = std::make_shared<ThisEmitter>(next);
                 auto key = std::make_tuple(state, event.code());
                 m_args_transition[key] = emitter;
             }
@@ -222,8 +196,9 @@ namespace ohm {
              */
             template <typename... EventArgs, typename... Args,
                     typename=typename std::enable_if<
-                    std::is_same<void,
-                            decltype(std::declval<Event<EventArgs...>>().emit(std::declval<Args>()...))>::value>::type>
+                    std::is_same<StateCode,
+                            decltype(std::declval<ArgsEmitter<StateCode(EventArgs...)>>().emit(
+                            std::declval<Args>()...))>::value>::type>
             void event(const Event<EventArgs...> &event, Args... args) {
                 this->event(event.code(), pass_value(args)...);
             }
@@ -269,11 +244,28 @@ namespace ohm {
                 }
             }
 
+            /**
+             * Well, kill the model before any thing will done.
+             * The backend thread would join atomically.
+             * After this method, all backend thread will dead.
+             */
+            void kill() {
+                UniqueLock<std::mutex> _lock(m_mutex_event.get());
+                if (state() != STATE_DEAD) {
+                    after(STATE_DEAD);
+                }
+                if (m_thread_backend) {
+                    m_thread_backend->join();
+                    m_thread_backend.reset();
+                    m_cond_event.reset();
+                    m_mutex_backend.reset();
+                }
+            }
+
         private:
             template <typename... Args>
             void event(EventCode code, Args... args) {
                 UniqueLock<std::mutex> _lock(m_mutex_event.get());
-
                 auto key = std::make_tuple(m_state.load(), code);
                 auto it = m_args_transition.find(key);
                 if (it == m_args_transition.end()) return;
@@ -284,8 +276,14 @@ namespace ohm {
                 if (emitter == nullptr) {
                     throw StateModelException("The transition function does not match: " + classname<StateCode(Args...)>());
                 }
-
-                emitter->emit(pass_value<Args>(args)...);
+                {
+                    StateCode state = STATE_STILL;
+                    this->before();
+                    After _after([this, &state]() {
+                        this->after(state);
+                    });
+                    state = emitter->emit(pass_value<Args>(args)...);
+                }
             }
 
             void before() {
@@ -333,9 +331,9 @@ namespace ohm {
 
             std::map<std::tuple<StateCode, EventCode>, std::shared_ptr<Emitter>> m_args_transition;
 
-            std::shared_ptr<std::mutex> m_mutex_event;
+            std::shared_ptr<std::mutex> m_mutex_event;  // to control no multi-thread changing state.
 
-            std::shared_ptr<std::mutex> m_mutex_backend;
+            std::shared_ptr<std::mutex> m_mutex_backend;    // use to run backend thread, ONLY backend use.
             std::shared_ptr<std::condition_variable> m_cond_event;
 
             std::shared_ptr<std::thread> m_thread_backend;
