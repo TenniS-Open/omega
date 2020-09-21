@@ -24,9 +24,9 @@
 
 namespace ohm {
     namespace _ {
-        inline std::vector<std::string> list_files(const std::string &path, std::vector<std::string> *dirs = nullptr) {
+        inline std::vector<std::string> list_files(const std::string &path, std::vector<std::string> *folders = nullptr) {
             std::vector<std::string> result;
-            if (dirs) dirs->clear();
+            if (folders) folders->clear();
 #if OHM_PLATFORM_OS_WINDOWS
             _finddata_t file;
             std::string pattern = path + file::sep() + "*";
@@ -36,7 +36,7 @@ namespace ohm {
             do {
                 if (strcmp(file.name, ".") == 0 || strcmp(file.name, "..") == 0) continue;
                 if (file.attrib & _A_SUBDIR) {
-                    if (dirs) dirs->push_back(file.name);
+                    if (folders) folders->push_back(file.name);
                 } else {
                     result.push_back(file.name);
                 }
@@ -55,7 +55,7 @@ namespace ohm {
                 if (strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0) continue;
                 if (file->d_type & DT_DIR)
                 {
-                    if (dirs) dirs->push_back(file->d_name);
+                    if (folders) folders->push_back(file->d_name);
                 }
                 else if (file->d_type & DT_REG)
                 {
@@ -70,50 +70,73 @@ namespace ohm {
         }
     }
 
+    /**
+     * @brief list files in `path`.
+     * @param path where to list files.
+     * @return vector of listed files.
+     */
     inline std::vector<std::string> list_files(const std::string &path) {
         return _::list_files(path);
     }
 
-    inline std::vector<std::string> list_files(const std::string &path, std::vector<std::string> &dirs) {
-        return _::list_files(path, &dirs);
+    /**
+     * @brief list files and folders in `path`.
+     * @param path where to list files and folders.
+     * @param [out] folders return vector of listed folders.
+     * @return vector of listed files.
+     */
+    inline std::vector<std::string> list_files(const std::string &path, std::vector<std::string> &folders) {
+        return _::list_files(path, &folders);
     }
 
+    /**
+     * @brief glob files in path with depth limit.
+     * @param path where to list files
+     * @param depth glob depth limit, -1 for no limits.
+     * @return vector of listed files.
+     */
     inline std::vector<std::string> glob_files(const std::string &path, int depth = -1) {
         std::vector<std::string> result;
         std::queue<std::pair<std::string, int> > work;
-        std::vector<std::string> dirs;
-        std::vector<std::string> files = list_files(path, dirs);
+        std::vector<std::string> folders;
+        std::vector<std::string> files = list_files(path, folders);
         result.insert(result.end(), files.begin(), files.end());
-        for (auto &dir : dirs) work.push({dir, 1});
+        for (auto &folder : folders) work.push({folder, 1});
         while (!work.empty()) {
             auto local_pair = work.front();
             work.pop();
             auto local_path = local_pair.first;
             auto local_depth = local_pair.second;
             if (depth > 0 && local_depth >= depth) continue;
-            files = list_files(path + file::sep() + local_path, dirs);
+            files = list_files(path + file::sep() + local_path, folders);
             for (auto &file : files) result.push_back(local_path + file::sep() + file);
-            for (auto &dir : dirs) work.push({local_path + file::sep() + dir, local_depth + 1});
+            for (auto &folder : folders) work.push({local_path + file::sep() + folder, local_depth + 1});
         }
         return result;
     }
 
+    /**
+     * @brief glob folders in path with depth limit.
+     * @param path where to list folders
+     * @param depth glob depth limit, -1 for no limits.
+     * @return vector of listed folders.
+     */
     inline std::vector<std::string> glob_folders(const std::string &path, int depth = -1) {
         std::vector<std::string> result;
         std::queue<std::pair<std::string, int> > work;
-        std::vector<std::string> dirs;
-        std::vector<std::string> files = list_files(path, dirs);
-        result.insert(result.end(), dirs.begin(), dirs.end());
-        for (auto &dir : dirs) work.push({dir, 1});
+        std::vector<std::string> folders;
+        std::vector<std::string> files = list_files(path, folders);
+        result.insert(result.end(), folders.begin(), folders.end());
+        for (auto &folder : folders) work.push({folder, 1});
         while (!work.empty()) {
             auto local_pair = work.front();
             work.pop();
             auto local_path = local_pair.first;
             auto local_depth = local_pair.second;
             if (depth > 0 && local_depth >= depth) continue;
-            files = list_files(path + file::sep() + local_path, dirs);
-            for (auto &dir : dirs) result.push_back(local_path + file::sep() + dir);
-            for (auto &dir : dirs) work.push({local_path + file::sep() + dir, local_depth + 1});
+            files = list_files(path + file::sep() + local_path, folders);
+            for (auto &folder : folders) result.push_back(local_path + file::sep() + folder);
+            for (auto &folder : folders) work.push({local_path + file::sep() + folder, local_depth + 1});
         }
         return result;
     }
