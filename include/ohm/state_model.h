@@ -91,6 +91,7 @@ namespace ohm {
             StateCode emit(Args ...args) const {
                 return m_next(pass_value<Args>(args)...);
             }
+
             StateCode operator()(Args ...args) const {
                 return emit(pass_value<Args>(args)...);
             }
@@ -103,7 +104,7 @@ namespace ohm {
          * Event object, which can be emmit and set in state model
          * @tparam Args event args
          */
-        template <typename... Args>
+        template<typename... Args>
         class Event {
         public:
             explicit Event(EventCode code)
@@ -214,7 +215,7 @@ namespace ohm {
              * @note If `next` return same state to now state, the state's enter and leaving function will also be modified.
              */
             void transit(StateCode state, EventCode event, StateCode next,
-                                          const VoidF &action) {
+                         const VoidF &action) {
                 transit(state, event, [action, next]() {
                     action();
                     return next;
@@ -275,7 +276,7 @@ namespace ohm {
              * @param obj event
              * @param args event parameters
              */
-            template <typename... EventArgs, typename... Args,
+            template<typename... EventArgs, typename... Args,
                     typename=typename std::enable_if<
                             std::is_same<StateCode,
                                     decltype(std::declval<ArgsEmitter<StateCode(EventArgs...)>>().emit(
@@ -293,7 +294,7 @@ namespace ohm {
             }
 
         private:
-            template <typename... Args>
+            template<typename... Args>
             void event(EventCode code, Args... args) {
                 auto key = std::make_tuple(m_state.load(), code);
                 auto it = m_args_transition.find(key);
@@ -301,9 +302,10 @@ namespace ohm {
 
                 using ThisEmitter = ArgsEmitter<StateCode(Args...)>;
 
-                auto emitter = dynamic_cast<ThisEmitter*>(it->second.get());
+                auto emitter = dynamic_cast<ThisEmitter *>(it->second.get());
                 if (emitter == nullptr) {
-                    throw StateModelException("The transition function does not match: " + classname<StateCode(Args...)>());
+                    throw StateModelException(
+                            "The transition function does not match: " + classname<StateCode(Args...)>());
                 }
                 {
                     StateCode state = STATE_STILL;
@@ -334,15 +336,14 @@ namespace ohm {
             }
 
             std::atomic<StateCode> m_state;
-            std::map<std::tuple<StateCode, EventCode>, Transition> m_transition;
             std::map<StateCode, VoidF> m_enter;
             std::map<StateCode, VoidF> m_leave;
-
+            std::map<std::tuple<StateCode, EventCode>, Transition> m_transition;
             std::map<std::tuple<StateCode, EventCode>, std::shared_ptr<Emitter>> m_args_transition;
         };
     }
 
-    template <typename... Args>
+    template<typename... Args>
     using Event = _::Event<Args...>;
     using StateModel = _::StateModel;
 }

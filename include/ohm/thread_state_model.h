@@ -133,7 +133,7 @@ namespace ohm {
              * @note If `next` return same state to now state, the state's enter and leaving function will also be modified.
              */
             void transit(StateCode state, EventCode event, StateCode next,
-                                           const VoidF &action) {
+                         const VoidF &action) {
                 transit(state, event, [action, next]() {
                     action();
                     return next;
@@ -194,11 +194,12 @@ namespace ohm {
              * @param obj event
              * @param args event parameters
              */
-            template <typename... EventArgs, typename... Args,
+            template<typename... EventArgs, typename... Args,
                     typename=typename std::enable_if<
                     std::is_same<StateCode,
-                            decltype(std::declval<ArgsEmitter<StateCode(EventArgs...)>>().emit(
+                            decltype(std::declval<ArgsEmitter < StateCode(EventArgs...)>>().emit(
                             std::declval<Args>()...))>::value>::type>
+
             void event(const Event<EventArgs...> &event, Args... args) {
                 this->event(event.code(), pass_value(args)...);
             }
@@ -263,7 +264,7 @@ namespace ohm {
             }
 
         private:
-            template <typename... Args>
+            template<typename... Args>
             void event(EventCode code, Args... args) {
                 UniqueLock<std::mutex> _lock(m_mutex_event.get());
                 auto key = std::make_tuple(m_state.load(), code);
@@ -272,9 +273,10 @@ namespace ohm {
 
                 using ThisEmitter = ArgsEmitter<StateCode(Args...)>;
 
-                auto emitter = dynamic_cast<ThisEmitter*>(it->second.get());
+                auto emitter = dynamic_cast<ThisEmitter *>(it->second.get());
                 if (emitter == nullptr) {
-                    throw StateModelException("The transition function does not match: " + classname<StateCode(Args...)>());
+                    throw StateModelException(
+                            "The transition function does not match: " + classname<StateCode(Args...)>());
                 }
                 {
                     StateCode state = STATE_STILL;
@@ -325,18 +327,23 @@ namespace ohm {
             }
 
             std::atomic<StateCode> m_state;
-            std::map<std::tuple<StateCode, EventCode>, Transition> m_transition;
             std::map<StateCode, VoidF> m_enter;
             std::map<StateCode, VoidF> m_leave;
-
+            std::map<std::tuple<StateCode, EventCode>, Transition> m_transition;
             std::map<std::tuple<StateCode, EventCode>, std::shared_ptr<Emitter>> m_args_transition;
 
-            std::shared_ptr<std::mutex> m_mutex_event;  // to control no multi-thread changing state.
+            // to control no multi-thread changing state.
+            std::shared_ptr<std::mutex> m_mutex_event;
 
-            std::shared_ptr<std::mutex> m_mutex_backend;    // use to run backend thread, ONLY backend use.
+            // use to run backend thread, ONLY backend use.
+            std::shared_ptr<std::mutex> m_mutex_backend;
+
+            // notify if state changed.
             std::shared_ptr<std::condition_variable> m_cond_event;
 
+            // backend thread, to run loop's action function automatically.
             std::shared_ptr<std::thread> m_thread_backend;
+
             // {state, {if_loop, <backend function>}}
             std::map<StateCode, VoidF> m_state_action;
         };
