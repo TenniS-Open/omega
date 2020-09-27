@@ -486,7 +486,7 @@ namespace ohm {
             CHECK(std::string(typeid(T).name()) + "()")
             SWITCH
             CASE(notation::type::Boolean)
-                return content ? 1 : 0;
+                return content ? T(1) : T(0);
             CASE(notation::type::String)
                 try {
                     return notation::string2<T>(content);

@@ -12,6 +12,7 @@
 #include "istream.h"
 
 #include <iostream>
+#include <cctype>
 
 namespace ohm {
     namespace parser {

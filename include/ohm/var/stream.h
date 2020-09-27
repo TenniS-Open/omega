@@ -59,7 +59,8 @@ namespace ohm {
 
     inline void *datacopy(void *dst, const void *src, size_t n) {
 #if defined(_MSC_VER) && _MSC_VER >= 1400
-        return memcpy_s(dst, n, src, n);
+        memcpy_s(dst, n, src, n);
+        return dst;
 #else
         return memcpy(dst, src, n);
 #endif

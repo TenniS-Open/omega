@@ -15,6 +15,8 @@
  * Undefined use variable in omega
  */
 #undef VOID
+#undef min
+#undef max
 
 #endif
 

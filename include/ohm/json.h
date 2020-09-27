@@ -543,7 +543,9 @@ namespace ohm {
         }
     }
 
-    class JSONObject : JSONBase {
+    class JSONObjectFriend {};
+
+    class JSONObject : public JSONBase {
     public:
         using Parser = std::function<void(const Var &)>;
         static constexpr uint64_t __MAGIC = 0x8848;
@@ -570,6 +572,7 @@ namespace ohm {
         void bind(const std::string &name, Parser parser, bool required = false) {
             __m_fields[name] = std::make_pair(required, parser);
         }
+        friend class JSONObjectFriend;
 
     private:
         std::map<std::string, std::pair<bool, Parser>> __m_fields;
@@ -589,7 +592,7 @@ namespace ohm {
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
 #define JSONField(cls, type, member, ...) \
-    struct _ohm_json_concat(__struct_bind_, member) { \
+    struct _ohm_json_concat(__struct_bind_, member) : public ohm::JSONObjectFriend { \
         _ohm_json_concat(__struct_bind_, member)() { \
             static_assert(std::is_base_of<ohm::JSONObject, cls>::value, "JSONField only support in JSONObject"); \
             auto _supper = reinterpret_cast<cls*>(reinterpret_cast<char*>(this) - ohm_risk_offsetof(cls, _ohm_json_concat(__bind_, member))); \
