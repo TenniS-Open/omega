@@ -543,7 +543,7 @@ namespace ohm {
         }
     }
 
-    class JSONObjectFriend {};
+    class JSONObjectBinder;
 
     class JSONObject : public JSONBase {
     public:
@@ -572,10 +572,18 @@ namespace ohm {
         void bind(const std::string &name, Parser parser, bool required = false) {
             __m_fields[name] = std::make_pair(required, parser);
         }
-        friend class JSONObjectFriend;
+        friend class JSONObjectBinder;
 
     private:
         std::map<std::string, std::pair<bool, Parser>> __m_fields;
+    };
+
+    class JSONObjectBinder {
+    protected:
+        void bind(JSONObject &object,
+                  const std::string &name, JSONObject::Parser parser, bool required = false) {
+            object.bind(name, parser, required);
+        }
     };
 }
 
@@ -592,7 +600,7 @@ namespace ohm {
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
 #define JSONField(cls, type, member, ...) \
-    struct _ohm_json_concat(__struct_bind_, member) : public ohm::JSONObjectFriend { \
+    struct _ohm_json_concat(__struct_bind_, member) : public ohm::JSONObjectBinder { \
         _ohm_json_concat(__struct_bind_, member)() { \
             static_assert(std::is_base_of<ohm::JSONObject, cls>::value, "JSONField only support in JSONObject"); \
             auto _supper = reinterpret_cast<cls*>(reinterpret_cast<char*>(this) - ohm_risk_offsetof(cls, _ohm_json_concat(__bind_, member))); \
@@ -600,7 +608,7 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            _supper->bind(#member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, #member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member); \
     type member
@@ -615,7 +623,7 @@ namespace ohm {
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
 #define JSONFieldV2(cls, type, member, json_member, ...) \
-    struct _ohm_json_concat(__struct_bind_, member) { \
+    struct _ohm_json_concat(__struct_bind_, member) : public ohm::JSONObjectBinder { \
         _ohm_json_concat(__struct_bind_, member)() { \
             static_assert(std::is_base_of<ohm::JSONObject, cls>::value, "JSONFieldV2 only support in JSONObject"); \
             auto _supper = reinterpret_cast<cls*>(reinterpret_cast<char*>(this) - ohm_risk_offsetof(cls, _ohm_json_concat(__bind_, member))); \
@@ -623,7 +631,7 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            _supper->bind(json_member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, json_member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member); \
     type member
@@ -636,7 +644,7 @@ namespace ohm {
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
 #define JSONBind(cls, member, ...) \
-    struct _ohm_json_concat(__struct_bind_, member) { \
+    struct _ohm_json_concat(__struct_bind_, member) : public ohm::JSONObjectBinder { \
         _ohm_json_concat(__struct_bind_, member)() { \
             static_assert(std::is_base_of<ohm::JSONObject, cls>::value, "JSONBind only support in JSONObject"); \
             auto _supper = reinterpret_cast<cls*>(reinterpret_cast<char*>(this) - ohm_risk_offsetof(cls, _ohm_json_concat(__bind_, member))); \
@@ -644,7 +652,7 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            _supper->bind(#member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, #member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member)
 
@@ -657,7 +665,7 @@ namespace ohm {
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
 #define JSONBindV2(cls, member, json_member, ...) \
-    struct _ohm_json_concat(__struct_bind_, member) { \
+    struct _ohm_json_concat(__struct_bind_, member) : public ohm::JSONObjectBinder { \
         _ohm_json_concat(__struct_bind_, member)() { \
             static_assert(std::is_base_of<ohm::JSONObject, cls>::value, "JSONBindV2 only support in JSONObject"); \
             auto _supper = reinterpret_cast<cls*>(reinterpret_cast<char*>(this) - ohm_risk_offsetof(cls, _ohm_json_concat(__bind_, member))); \
@@ -665,7 +673,7 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            _supper->bind(json_member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, json_member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member)
 
