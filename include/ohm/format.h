@@ -58,6 +58,62 @@ namespace ohm {
         }
         return oss.str();
     }
+
+    namespace _ {
+        template<typename T, typename=void>
+        struct has_member_operator : public std::false_type {
+        };
+
+        template<typename T>
+        struct has_member_operator<T, typename
+        std::enable_if<std::is_constructible<
+                decltype(std::declval<std::ostream>().operator<<(std::declval<T>())),
+                std::ostream &>::value>::type> : public std::true_type {
+        };
+
+        template<typename T, typename=void>
+        struct has_function_operator : public std::false_type {
+        };
+
+        template<typename T>
+        struct has_function_operator<T, typename
+        std::enable_if<std::is_constructible<
+                decltype(operator<<(std::declval<std::ostream &>(), std::declval<T>())),
+                std::ostream &>::value>::type> : public std::true_type {
+        };
+
+        template<typename T>
+        struct is_output_streamable : public std::integral_constant<bool,
+                has_member_operator<T>::value || has_function_operator<T>::value> {
+        };
+
+        inline std::ostream &scat(std::ostream &out) {
+            return out;
+        }
+
+        template<typename T, typename=typename
+        std::enable_if<is_output_streamable<T>::value>::type>
+        inline std::ostream &scat(std::ostream &out, const T &t) {
+            return out << t;
+        }
+
+        template<typename T, typename... Args, typename=typename
+        std::enable_if<is_output_streamable<T>::value>::type>
+        inline std::ostream &scat(std::ostream &out, const T &t, const Args &...args) {
+            out << t;
+            return scat(out, args...);
+        }
+    }
+
+    template<typename... Args, typename=typename
+    std::enable_if<std::is_constructible<
+            decltype(_::scat(std::declval<std::ostream &>(),
+                             std::declval<Args>()...)), std::ostream &>::value>::type>
+    inline std::string concat(const Args &...args) {
+        std::ostringstream oss;
+        _::scat(oss, args...);
+        return oss.str();
+    }
 }
 
 #endif //OMEGA_FORMAT_H

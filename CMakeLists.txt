@@ -22,6 +22,23 @@ FILE(GLOB_RECURSE TEST_FILES ${PROJECT_SOURCE_DIR}/test/*.cpp)
 FILE(GLOB_RECURSE TOOL_FILES ${PROJECT_SOURCE_DIR}/tools/*.cpp)
 FILE(GLOB_RECURSE CTEST_FILES ${PROJECT_SOURCE_DIR}/ctest/*.cpp)
 
+# example for platform and toolchain
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+        "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "NVIDIA")
+endif()
+
+if (MINGW)
+    target_link_libraries(wsock32)
+elseif(WIN32)
+elseif (ANDROID)
+elseif (IOS)
+elseif (APPLE)
+elseif (UNIX)
+else ()
+endif ()
+
 # build test codes
 foreach (path ${TEST_FILES})
     string(REGEX MATCH "[^/]*.[(c)|(cc)|(cpp)]$" file_ext ${path})
