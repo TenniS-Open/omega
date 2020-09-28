@@ -38,7 +38,6 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <fstream>
-#include <orz/io/dir.h>
 
 #include <string.h>
 
