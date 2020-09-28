@@ -99,7 +99,7 @@ namespace ohm {
 #if OHM_PLATFORM_OS_WINDOWS
         return CopyFileA(fromfile.c_str(), tofile.c_str(), !force) != FALSE;
 #elif OHM_PLATFORM_OS_LINUX
-        return std::system(orz::Concat(force ? "cp -f " : "cp ", fromfile, ' ', tofile).c_str()) == 0;
+        return std::system(sprint(force ? "cp -f " : "cp ", fromfile, ' ', tofile).c_str()) == 0;
 #else
         std::ifstream input(fromfile, std::ios::binary);
         std::ofstream output(tofile, std::ios::binary);
