@@ -30,7 +30,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "NVIDIA")
 endif()
 
 if (MINGW)
-    link_libraries(wsock32)
+    link_libraries(wsock32 ws2_32)
 elseif(WIN32)
 elseif (ANDROID)
 elseif (IOS)
