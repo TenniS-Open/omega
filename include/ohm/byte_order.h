@@ -155,6 +155,10 @@ namespace ohm {
                 std::is_integral<I>::value && sizeof(I) == sizeof(T)>::type>
         void set_byte(I byte) { m_byte = T(byte); }
 
+        T *addr() { return &m_byte; }
+
+        const T *addr() const { return &m_byte; }
+
     protected:
         T m_byte = T(0);
     };
