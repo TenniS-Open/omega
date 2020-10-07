@@ -14,6 +14,7 @@
 #include <regex>
 
 #include "byte_order.h"
+#include "socket_errno.h"
 
 #include "format.h"
 #include "platform.h"
@@ -46,7 +47,24 @@ namespace ohm {
         using self = SocketException;
         using supper = Exception;
 
-        SocketException(std::string msg) : supper(std::move(msg)) {}
+        SocketException(std::string msg)
+                : supper(Message(SocketError::UNKNOWN, std::move(msg))), m_errcode(SocketError::UNKNOWN) {}
+
+        SocketException(SocketError errcode, std::string msg)
+                : supper(Message(errcode, std::move(msg))), m_errcode(errcode) {}
+
+        SocketException(const std::pair<SocketError, std::string> &error)
+                : supper(Message(error.first, error.second)), m_errcode(error.first) {}
+
+        SocketError errcode() const { return m_errcode; }
+
+    public:
+        static std::string Message(SocketError errcode, std::string msg) {
+            return concat("Socket wrapper got(", int(errcode), "): ", msg);
+        }
+
+    private:
+        SocketError m_errcode = SocketError::UNKNOWN;
     };
 
     class SocketPipeException : public SocketException {
@@ -54,11 +72,18 @@ namespace ohm {
         using self = SocketPipeException;
         using supper = SocketException;
 
-        SocketPipeException(std::string msg) : supper(std::move(msg)) {}
+        using supper::supper;
     };
 
+    class SocketPipeBlockException : public SocketPipeException {
+    public:
+        using self = SocketPipeBlockException;
+        using supper = SocketPipeException;
 
-    inline std::string GetLastSocketError() {
+        using supper::supper;
+    };
+
+    inline std::string GetSystemSocketMessage() {
 #if OHM_PLATFORM_OS_WINDOWS
         return win::format_message(WSAGetLastError());
 #else
@@ -66,16 +91,21 @@ namespace ohm {
 #endif
     }
 
+
     namespace _ {
+        inline bool SocketWouldBlock() {
+#if OHM_PLATFORM_OS_WINDOWS
+            return WSAGetLastError() == WSAEWOULDBLOCK;
+#else
+            return errno == EWOULDBLOCK;
+#endif
+        }
+
         inline bool SocketEOF(SOCKET_T socket) {
             char mark;
             auto flag = ::recv(socket, &mark, 1, MSG_PEEK);
             if (flag > 0) return false;
-#if OHM_PLATFORM_OS_WINDOWS
-            if (flag < 0 && WSAGetLastError() == WSAEWOULDBLOCK) return false;
-#else
-            if (flag < 0 && errno == EWOULDBLOCK) return false;
-#endif
+            if (flag < 0 && SocketWouldBlock()) return false;
             return true;
         }
     }
@@ -132,7 +162,9 @@ namespace ohm {
             ANY,
         };
 
-        virtual Family family() const = 0;
+        Family family() const {
+            return Family(addr()->sa_family);
+        }
 
         virtual const sockaddr *addr() const = 0;
 
@@ -149,10 +181,6 @@ namespace ohm {
         AnyAddress(const sockaddr *addr, socklen_t len) {
             std::memcpy(&m_u, addr, len);
             m_size = len;
-        }
-
-        Family family() const final {
-            return Family(addr()->sa_family);
         }
 
         const sockaddr *addr() const final {
@@ -203,10 +231,6 @@ namespace ohm {
             m_addr.sin_port = htons(port);
         }
 
-        Family family() const final {
-            return Family::IPv4;
-        }
-
         const sockaddr *addr() const final {
             return (struct sockaddr *) (&m_addr);
         }
@@ -241,10 +265,6 @@ namespace ohm {
             m_addr.sin6_family = AF_INET6;
             m_addr.sin6_addr = in6addr_any;
             m_addr.sin6_port = htons(port);
-        }
-
-        Family family() const final {
-            return Family::IPv6;
         }
 
         const sockaddr *addr() const final {
@@ -337,20 +357,20 @@ namespace ohm {
 
         void bind(const Address &address) {
             if (::bind(m_socket, address.addr(), address.len()) == -1) {
-                throw SocketException(concat("bind socket failed: ", GetLastSocketError()));
+                throw SocketException(GetLastSocketError("bind socket failed: "));
             }
             m_address = AnyAddress(address.addr(), address.len());
         }
 
         void listen(int backlog = 16) {
             if (::listen(m_socket, backlog) == -1) {
-                throw SocketException(concat("listen socket failed: ", GetLastSocketError()));
+                throw SocketException(GetLastSocketError("listen socket failed: "));
             }
         }
 
         void connect(const Address &address) {
             if (::connect(m_socket, address.addr(), address.len()) < 0) {
-                throw SocketException(concat("connect socket failed: ", GetLastSocketError()));
+                throw SocketException(GetLastSocketError("connect socket failed: "));
             }
             m_address = AnyAddress(address.addr(), address.len());
         }
@@ -359,7 +379,7 @@ namespace ohm {
             AnyAddress addr;
             auto connected = ::accept(m_socket, addr.raddr(), &addr.rlen());
             if (connected == INVALID_SOCKET) {
-                throw SocketException(concat("accept socket failed: ", GetLastSocketError()));
+                throw SocketException(GetLastSocketError("accept socket failed: "));
             }
             Socket tmp(connected);
             tmp.m_address = addr;
@@ -377,7 +397,7 @@ namespace ohm {
         int recv(void *buf, int len, int flags = 0) const {
             auto size = ::recv(m_socket, reinterpret_cast<char *>(buf), len, flags);
             if (size < 0) {
-                throw SocketPipeException(concat("recv socket failed: ", GetLastSocketError()));
+                throw SocketException(GetLastSocketError("recv socket failed: "));
             }
             return size;
         }
@@ -385,7 +405,7 @@ namespace ohm {
         int send(const void *buf, int len, int flags = 0) const {
             auto size = ::send(m_socket, reinterpret_cast<const char *>(buf), len, flags);
             if (size < 0) {
-                throw SocketPipeException(concat("send socket failed: ", GetLastSocketError()));
+                throw SocketException(GetLastSocketError("send socket failed: "));
             }
             return size;
         }
@@ -418,7 +438,7 @@ namespace ohm {
         Socket(Family domain, Type type, Protocol protocol) {
             m_socket = socket(int(domain), int(type), int(protocol));
             if (m_socket == INVALID_SOCKET) {
-                throw SocketException(concat("socket failed: ", GetLastSocketError()));
+                throw SocketException(GetLastSocketError("socket failed: "));
             }
         }
 
