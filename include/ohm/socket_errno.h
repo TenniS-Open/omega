@@ -33,12 +33,34 @@
 namespace ohm {
     enum class SocketError : int32_t {
         SUCCESS = 0,
-        INVALID_PARAMETER = 0x1000,
+        // parameter error
+        INVALID_PARAMETER = 0x1000, ///< same as EINVAL
         AF_NO_SUPPORT = 0x1001,
         PROTO_NO_SUPPORT = 0x1002,
         PROTOTYPE = 0x1003,
         SOCKET_NO_SUPPORT = 0x1004,
+        // permission error
+        ACCESS_DENIED = 0x2001, ///< same as EACCES
+        OPERATION_NOT_SUPPORTED = 0x2002,   ///< same as EOPNOTSUPP
+        // connection error
+        ADDRESS_IS_USED = 0x3001,    ///< same as EADDRINUSE
+        ADDRESS_NOT_AVAILABLE = 0x3002, ///< same as EADDRNOTAVAIL
+        IS_CONNECTED = 0x3003,  ///< same as EISCONN
+        CONNECTION_ABORTED = 0x3004,  ///< same as ECONNABORTED
+        CONNECTION_RESET = 0x3005,  ///< same as ECONNRESET
+        CONNECTION_ALREADY = 0x3006,    ///< same as EALREADY
+        CONNECTION_REFUSED = 0x3007,   ///< same as ECONNREFUSED
+        NET_UNREACH = 0x3008,   ///< same as NETUNREACH
+        HOST_UNREACH = 0x3009,  ///< same as HOSTUNREACH
+        TIMEOUT = 0x300a,
+        // io error
         WOULD_BLOCK = 0x3001,
+        // fault error
+        FAULT = 0xF000,
+        NET_DOWN = 0xF001,  // same as ENETDOWN
+        MFILE = 0xF002, // no more fd
+        NOBUFS = 0xF003,    // no more buffer available
+        // unknown error
         UNKNOWN = -1,
     };
 
