@@ -33,7 +33,11 @@
 namespace ohm {
     enum class SocketError : int32_t {
         SUCCESS = 0,
-        PARAMETER_ERROR = 0x1000,
+        INVALID_PARAMETER = 0x1000,
+        AF_NO_SUPPORT = 0x1001,
+        PROTO_NO_SUPPORT = 0x1002,
+        PROTOTYPE = 0x1003,
+        SOCKET_NO_SUPPORT = 0x1004,
         WOULD_BLOCK = 0x3001,
         UNKNOWN = -1,
     };
@@ -60,8 +64,24 @@ namespace ohm {
             case ERROR_SUCCESS:
                 code = SocketError::SUCCESS;
                 break;
+            case WSAEINVAL:
+                code = SocketError::INVALID_PARAMETER;
+                break;
+            case WSAEAFNOSUPPORT:
+                code = SocketError::AF_NO_SUPPORT;
+                break;
+            case WSAEPROTONOSUPPORT:
+                code = SocketError::PROTO_NO_SUPPORT;
+                break;
+            case WSAEPROTOTYPE:
+                code = SocketError::PROTOTYPE;
+                break;
+            case WSAESOCKTNOSUPPORT:
+                code = SocketError::SOCKET_NO_SUPPORT;
+                break;
             case WSAEWOULDBLOCK:
                 code = SocketError::WOULD_BLOCK;
+                break;
         }
 #else
         switch (errno) {
@@ -70,6 +90,18 @@ namespace ohm {
                 break;
             case 0:
                 code = SocketError::SUCCESS;
+                break;
+            case EINVAL:
+                code = SocketError::INVALID_PARAMETER;
+                break;
+            case EAFNOSUPPORT:
+                code = SocketError::AF_NO_SUPPORT;
+                break;
+            case EPROTONOSUPPORT:
+                code = SocketError::PROTO_NO_SUPPORT;
+                break;
+            case EPROTOTYPE:
+                code = SocketError::PROTOTYPE;
                 break;
             case EWOULDBLOCK:
                 code = SocketError::WOULD_BLOCK;

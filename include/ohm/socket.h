@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <regex>
+#include <iomanip>
 
 #include "byte_order.h"
 #include "socket_errno.h"
@@ -60,25 +61,21 @@ namespace ohm {
 
     public:
         static std::string Message(SocketError errcode, std::string msg) {
-            return concat("Socket wrapper got(", int(errcode), "): ", msg);
+            std::ostringstream oss;
+            oss << "Socket wrapper error";
+            oss << "(" << std::hex << "0x" << std::setw(8) << std::setfill('0') << int(errcode) << "): ";
+            oss << msg;
+            return oss.str();
         }
 
     private:
         SocketError m_errcode = SocketError::UNKNOWN;
     };
 
-    class SocketPipeException : public SocketException {
+    class SocketIOException : public SocketException {
     public:
-        using self = SocketPipeException;
+        using self = SocketIOException;
         using supper = SocketException;
-
-        using supper::supper;
-    };
-
-    class SocketPipeBlockException : public SocketPipeException {
-    public:
-        using self = SocketPipeBlockException;
-        using supper = SocketPipeException;
 
         using supper::supper;
     };
@@ -321,7 +318,7 @@ namespace ohm {
         };
 
         enum Flag {
-            WAITALL = MSG_WAITALL,
+            WAIT_ALL = MSG_WAITALL,
         };
 
         Socket(const Socket &) = delete;
@@ -438,7 +435,7 @@ namespace ohm {
         Socket(Family domain, Type type, Protocol protocol) {
             m_socket = socket(int(domain), int(type), int(protocol));
             if (m_socket == INVALID_SOCKET) {
-                throw SocketException(GetLastSocketError("socket failed: "));
+                throw SocketException(GetLastSocketError("create socket failed: "));
             }
         }
 
