@@ -397,7 +397,7 @@ namespace ohm {
         int recv(void *buf, int len, int flags = 0) const {
             auto size = ::recv(m_socket, reinterpret_cast<char *>(buf), len, flags);
             if (size < 0) {
-                throw SocketException(GetLastSocketError("recv socket failed: "));
+                throw SocketIOException(GetLastSocketError("recv socket failed: "));
             }
             return size;
         }
@@ -405,7 +405,7 @@ namespace ohm {
         int send(const void *buf, int len, int flags = 0) const {
             auto size = ::send(m_socket, reinterpret_cast<const char *>(buf), len, flags);
             if (size < 0) {
-                throw SocketException(GetLastSocketError("send socket failed: "));
+                throw SocketIOException(GetLastSocketError("send socket failed: "));
             }
             return size;
         }
