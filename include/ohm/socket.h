@@ -36,7 +36,10 @@
 #define SOCKET_T int
 #define CLOSE_SOCKET close
 #ifndef INVALID_SOCKET
-#define INVALID_SOCKET -1
+#define INVALID_SOCKET (-1)
+#endif
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR (-1)
 #endif
 #else
 #error "socket only support in windows and unix link system."
@@ -49,7 +52,7 @@ namespace ohm {
         using supper = Exception;
 
         SocketException(std::string msg)
-                : supper(Message(SocketError::UNKNOWN, std::move(msg))), m_errcode(SocketError::UNKNOWN) {}
+                : supper(Message(SocketError::FAULT, std::move(msg))), m_errcode(SocketError::FAULT) {}
 
         SocketException(SocketError errcode, std::string msg)
                 : supper(Message(errcode, std::move(msg))), m_errcode(errcode) {}
@@ -353,20 +356,20 @@ namespace ohm {
         }
 
         void bind(const Address &address) {
-            if (::bind(m_socket, address.addr(), address.len()) == -1) {
+            if (::bind(m_socket, address.addr(), address.len()) == SOCKET_ERROR) {
                 throw SocketException(GetLastSocketError("bind socket failed: "));
             }
             m_address = AnyAddress(address.addr(), address.len());
         }
 
         void listen(int backlog = 16) {
-            if (::listen(m_socket, backlog) == -1) {
+            if (::listen(m_socket, backlog) == SOCKET_ERROR) {
                 throw SocketException(GetLastSocketError("listen socket failed: "));
             }
         }
 
         void connect(const Address &address) {
-            if (::connect(m_socket, address.addr(), address.len()) < 0) {
+            if (::connect(m_socket, address.addr(), address.len()) == SOCKET_ERROR) {
                 throw SocketException(GetLastSocketError("connect socket failed: "));
             }
             m_address = AnyAddress(address.addr(), address.len());

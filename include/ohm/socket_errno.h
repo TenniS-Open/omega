@@ -11,9 +11,9 @@
 #include "platform.h"
 
 #if OHM_PLATFORM_OS_WINDOWS
+
 #include "ohm/sys/winsock2.h"
-#define SOCKET_T SOCKET
-#define CLOSE_SOCKET closesocket
+
 #elif OHM_PLATFORM_OS_LINUX || OHM_PLATFORM_OS_MAC
 #include <unistd.h>
 #include <errno.h>
@@ -21,46 +21,61 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#define SOCKET_T int
-#define CLOSE_SOCKET close
-#ifndef INVALID_SOCKET
-#define INVALID_SOCKET -1
-#endif
 #else
 #error "socket only support in windows and unix link system."
 #endif
 
 namespace ohm {
     enum class SocketError : int32_t {
+        // The operation completed successfully.
         SUCCESS = 0,
-        // parameter error
-        INVALID_PARAMETER = 0x1000, ///< same as EINVAL
-        AF_NO_SUPPORT = 0x1001,
-        PROTO_NO_SUPPORT = 0x1002,
+        // An invalid argument was supplied.
+        INVAL = 0x1000,
+        // An address incompatible with the requested protocol was used.
+        AFNOSUPPORT = 0x1001,
+        // The requested protocol has not been configured into the system, or no implementation for it exists.
+        PROTONOSUPPORT = 0x1002,
+        // A protocol was specified in the socket function call that does not support the semantics of the socket type requested.
         PROTOTYPE = 0x1003,
-        SOCKET_NO_SUPPORT = 0x1004,
-        // permission error
-        ACCESS_DENIED = 0x2001, ///< same as EACCES
-        OPERATION_NOT_SUPPORTED = 0x2002,   ///< same as EOPNOTSUPP
-        // connection error
-        ADDRESS_IS_USED = 0x3001,    ///< same as EADDRINUSE
-        ADDRESS_NOT_AVAILABLE = 0x3002, ///< same as EADDRNOTAVAIL
-        IS_CONNECTED = 0x3003,  ///< same as EISCONN
-        CONNECTION_ABORTED = 0x3004,  ///< same as ECONNABORTED
-        CONNECTION_RESET = 0x3005,  ///< same as ECONNRESET
-        CONNECTION_ALREADY = 0x3006,    ///< same as EALREADY
-        CONNECTION_REFUSED = 0x3007,   ///< same as ECONNREFUSED
-        NET_UNREACH = 0x3008,   ///< same as NETUNREACH
-        HOST_UNREACH = 0x3009,  ///< same as HOSTUNREACH
-        TIMEOUT = 0x300a,
-        // io error
-        WOULD_BLOCK = 0x3001,
-        // fault error
+        // The support for the specified socket type does not exist in this address family.
+        SOCKETNOSUPPORT = 0x1004,
+        // An attempt was made to access a socket in a way forbidden by its access permissions.
+        ACCES = 0x2001,
+        // The attempted operation is not supported for the type of object referenced.
+        OPNOTSUPP = 0x2002,
+        // Only one usage of each socket address (protocol/network address/port) is normally permitted.
+        ADDRINUSE = 0x3001,
+        // The requested address is not valid in its context.
+        ADDRNOTAVAIL = 0x3002,
+        // A connect request was made on an already connected socket.
+        ISCONN = 0x3003,
+        // An established connection was aborted by the software in your host machine.
+        CONNABORTED = 0x3004,
+        // An existing connection was forcibly closed by the remote host.
+        CONNRESET = 0x3005,
+        // No connection could be made because the target machine actively refused it.
+        CONNREFUSED = 0x3006,
+        // An operation was attempted on a non-blocking socket that already had an operation in progress.
+        ALREADY = 0x3007,
+        // A socket operation was attempted to an unreachable network.
+        NETUNREACH = 0x3008,
+        // A socket operation was attempted to an unreachable host.
+        HOSTUNREACH = 0x3009,
+        // A connection attempt failed because the connected party did not properly respond after a period of time,
+        // or established connection failed because connected host has failed to respond.
+        TIMEDOUT = 0x300a,
+        // A socket operation encountered a dead network.
+        NETDOWN = 0x300b,
+        // A non-blocking socket operation could not be completed immediately.
+        WOULDBLOCK = 0x3001,
+        // The system detected an invalid pointer address in attempting to use a pointer argument in a call.
         FAULT = 0xF000,
-        NET_DOWN = 0xF001,  // same as ENETDOWN
-        MFILE = 0xF002, // no more fd
-        NOBUFS = 0xF003,    // no more buffer available
-        // unknown error
+        // Too many open sockets.
+        MFILE = 0xF002,
+        // An operation on a socket could not be performed because the system lacked sufficient buffer space
+        // or because a queue was full.
+        NOBUFS = 0xF003,
+        // Unknown error.
         UNKNOWN = -1,
     };
 
@@ -74,62 +89,78 @@ namespace ohm {
 #endif
             return oss.str();
         }
+
+        inline SocketError tell_errcode() {
+#if OHM_PLATFORM_OS_WINDOWS
+            switch (WSAGetLastError()) {
+                default: return SocketError::UNKNOWN;
+                case ERROR_SUCCESS: return SocketError::SUCCESS;
+                    // parameter error
+                case WSAEINVAL: return SocketError::INVAL;
+                case WSAEAFNOSUPPORT: return SocketError::AFNOSUPPORT;
+                case WSAEPROTONOSUPPORT: return SocketError::PROTONOSUPPORT;
+                case WSAEPROTOTYPE: return SocketError::PROTOTYPE;
+                case WSAESOCKTNOSUPPORT: return SocketError::SOCKETNOSUPPORT;
+                    // permission error
+                case WSAEACCES: return SocketError::ACCES;
+                case WSAEOPNOTSUPP: return SocketError::OPNOTSUPP;
+                    // connection error
+                case WSAEADDRINUSE: return SocketError::ADDRINUSE;
+                case WSAEADDRNOTAVAIL: return SocketError::ADDRNOTAVAIL;
+                case WSAEISCONN: return SocketError::ISCONN;
+                case WSAECONNABORTED: return SocketError::CONNABORTED;
+                case WSAECONNRESET: return SocketError::CONNRESET;
+                case WSAECONNREFUSED: return SocketError::CONNREFUSED;
+                case WSAEALREADY: return SocketError::ALREADY;
+                case WSAENETUNREACH: return SocketError::NETUNREACH;
+                case WSAEHOSTUNREACH: return SocketError::HOSTUNREACH;
+                case WSAETIMEDOUT: return SocketError::TIMEDOUT;
+                case WSAENETDOWN: return SocketError::NETDOWN;
+                    // io error
+                case WSAEWOULDBLOCK: return SocketError::WOULDBLOCK;
+                    // fault error
+                case WSAEFAULT: return SocketError::FAULT;
+                case WSAEMFILE: return SocketError::MFILE;
+                case WSAENOBUFS: return SocketError::NOBUFS;
+            }
+#else
+            switch (errno) {
+                default: return SocketError::UNKNOWN;
+                case 0: return SocketError::SUCCESS;
+                    // parameter error
+                case EINVAL: return SocketError::INVAL;
+                case EAFNOSUPPORT: return SocketError::AFNOSUPPORT;
+                case EPROTONOSUPPORT: return SocketError::PROTONOSUPPORT;
+                case EPROTOTYPE: return SocketError::PROTOTYPE;
+                case ESOCKTNOSUPPORT: return SocketError::SOCKETNOSUPPORT;
+                    // permission error
+                case EACCES: return SocketError::ACCES;
+                case EOPNOTSUPP: return SocketError::OPNOTSUPP;
+                    // connection error
+                case EADDRINUSE: return SocketError::ADDRINUSE;
+                case EADDRNOTAVAIL: return SocketError::ADDRNOTAVAIL;
+                case EISCONN: return SocketError::ISCONN;
+                case ECONNABORTED: return SocketError::CONNABORTED;
+                case ECONNRESET: return SocketError::CONNRESET;
+                case ECONNREFUSED: return SocketError::CONNREFUSED;
+                case EALREADY: return SocketError::ALREADY;
+                case ENETUNREACH: return SocketError::NETUNREACH;
+                case EHOSTUNREACH: return SocketError::HOSTUNREACH;
+                case ETIMEDOUT: return SocketError::TIMEDOUT;
+                    // io error
+                case EWOULDBLOCK: return SocketError::WOULDBLOCK;
+                    // fault error
+                case EFAULT: return SocketError::FAULT;
+                case ENETDOWN: return SocketError::NETDOWN;
+                case EMFILE: return SocketError::MFILE;
+                case ENOBUFS: return SocketError::NOBUFS;
+            }
+#endif
+        }
     }
 
-    inline std::pair<SocketError, std::string> GetLastSocketError(const std::string &title="") {
-        SocketError code;
-#if OHM_PLATFORM_OS_WINDOWS
-        switch (WSAGetLastError()) {
-            default:
-                code = SocketError::UNKNOWN;
-                break;
-            case ERROR_SUCCESS:
-                code = SocketError::SUCCESS;
-                break;
-            case WSAEINVAL:
-                code = SocketError::INVALID_PARAMETER;
-                break;
-            case WSAEAFNOSUPPORT:
-                code = SocketError::AF_NO_SUPPORT;
-                break;
-            case WSAEPROTONOSUPPORT:
-                code = SocketError::PROTO_NO_SUPPORT;
-                break;
-            case WSAEPROTOTYPE:
-                code = SocketError::PROTOTYPE;
-                break;
-            case WSAESOCKTNOSUPPORT:
-                code = SocketError::SOCKET_NO_SUPPORT;
-                break;
-            case WSAEWOULDBLOCK:
-                code = SocketError::WOULD_BLOCK;
-                break;
-        }
-#else
-        switch (errno) {
-            default:
-                code = SocketError::UNKNOWN;
-                break;
-            case 0:
-                code = SocketError::SUCCESS;
-                break;
-            case EINVAL:
-                code = SocketError::INVALID_PARAMETER;
-                break;
-            case EAFNOSUPPORT:
-                code = SocketError::AF_NO_SUPPORT;
-                break;
-            case EPROTONOSUPPORT:
-                code = SocketError::PROTO_NO_SUPPORT;
-                break;
-            case EPROTOTYPE:
-                code = SocketError::PROTOTYPE;
-                break;
-            case EWOULDBLOCK:
-                code = SocketError::WOULD_BLOCK;
-                break;
-        }
-#endif
+    inline std::pair<SocketError, std::string> GetLastSocketError(const std::string &title = "") {
+        auto code = _::tell_errcode();
         return std::make_pair(code, _::make_system_socket_error_message(title));
     }
 }
