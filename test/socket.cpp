@@ -29,7 +29,6 @@ void server() {
 void client() {
     println("=================== Client =====================");
     try {
-        Socket a;
         auto pipe = Client::Connect(Protocol::TCP, IPv4("127.0.0.1", 2333));
 
         char buffer[1024];

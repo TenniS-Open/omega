@@ -137,7 +137,8 @@ namespace ohm {
         SocketEnv(std::nullptr_t)
                 : m_flag(0) {}
 
-        SocketEnv(SocketEnv &&other) {
+        SocketEnv(SocketEnv &&other)
+                : m_flag(0) {
             std::swap(m_flag, other.m_flag);
         }
 
@@ -358,13 +359,15 @@ namespace ohm {
 
         Socket() : m_env(nullptr) {}
 
-        Socket(Socket &&other) OHM_NOEXCEPT {
+        Socket(Socket &&other) OHM_NOEXCEPT
+            : m_env(nullptr) {
             std::swap(m_socket, other.m_socket);
             m_env = std::move(other.m_env);
             std::swap(m_address, other.m_address);
         }
 
         Socket &operator=(Socket &&other) OHM_NOEXCEPT {
+            if (this == &other) return *this;
             this->close();
             std::swap(m_socket, other.m_socket);
             m_env = std::move(other.m_env);
@@ -524,7 +527,7 @@ namespace ohm {
         }
 
         Connection accept() {
-            return Connection(std::make_shared<Socket>(m_socket->accept()));
+            return Connection(std::make_shared<Socket>(std::move(m_socket->accept())));
         }
 
         void close() {
