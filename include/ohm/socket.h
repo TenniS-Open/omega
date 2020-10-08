@@ -52,7 +52,7 @@ namespace ohm {
         using supper = Exception;
 
         SocketException(std::string msg)
-                : supper(Message(SocketError::FAULT, std::move(msg))), m_errcode(SocketError::FAULT) {}
+                : supper(Message(SocketError::UNKNOWN, std::move(msg))), m_errcode(SocketError::UNKNOWN) {}
 
         SocketException(SocketError errcode, std::string msg)
                 : supper(Message(errcode, std::move(msg))), m_errcode(errcode) {}
