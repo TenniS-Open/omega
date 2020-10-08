@@ -18,8 +18,10 @@ void server() {
         auto n = pipe.recv(buffer, 1024);
         buffer[n] = '\0';
         printf("recv msg from client: %s\n", buffer);
-    } catch (const SocketException &e) {
-        println(e.what());
+    } catch (const SocketSetupException &e) {
+        println("Setup Server failed: ", e.what());
+    } catch (const SocketIOException &e) {
+        println("Connection IO failed: ", e.what());
     }
 
 }
@@ -27,13 +29,16 @@ void server() {
 void client() {
     println("=================== Client =====================");
     try {
+        Socket a;
         auto pipe = Client::Connect(Protocol::TCP, IPv4("127.0.0.1", 2333));
 
         char buffer[1024];
         fgets(buffer, 1000, stdin);
         pipe.send(buffer, int(strlen(buffer)));
-    } catch (const SocketException &e) {
-        println(e.what());
+    } catch (const SocketSetupException &e) {
+        println("Setup Server failed: ", e.what());
+    } catch (const SocketIOException &e) {
+        println("Connection IO failed: ", e.what());
     }
 }
 

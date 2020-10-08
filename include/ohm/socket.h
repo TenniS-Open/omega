@@ -23,16 +23,21 @@
 #include "except.h"
 
 #if OHM_PLATFORM_OS_WINDOWS
+
 #include "ohm/sys/winsock2.h"
+
 #define SOCKET_T SOCKET
 #define CLOSE_SOCKET closesocket
+
 #elif OHM_PLATFORM_OS_LINUX || OHM_PLATFORM_OS_MAC
+
 #include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
 #define SOCKET_T int
 #define CLOSE_SOCKET close
 #ifndef INVALID_SOCKET
@@ -41,6 +46,7 @@
 #ifndef SOCKET_ERROR
 #define SOCKET_ERROR (-1)
 #endif
+
 #else
 #error "socket only support in windows and unix link system."
 #endif
@@ -73,6 +79,14 @@ namespace ohm {
 
     private:
         SocketError m_errcode = SocketError::UNKNOWN;
+    };
+
+    class SocketSetupException : public SocketException {
+    public:
+        using self = SocketSetupException;
+        using supper = SocketException;
+
+        using supper::supper;
     };
 
     class SocketIOException : public SocketException {
@@ -118,13 +132,22 @@ namespace ohm {
 
         SocketEnv &operator=(const SocketEnv &) = delete;
 
-        SocketEnv(SocketEnv &&) = default;
-
-        SocketEnv &operator=(SocketEnv &&) = default;
-
 #if OHM_PLATFORM_OS_WINDOWS
 
-        SocketEnv() {
+        SocketEnv(std::nullptr_t)
+                : m_flag(0) {}
+
+        SocketEnv(SocketEnv &&other) {
+            std::swap(m_flag, other.m_flag);
+        }
+
+        SocketEnv &operator=(SocketEnv &&other) {
+            std::swap(m_flag, other.m_flag);
+            return *this;
+        }
+
+        SocketEnv()
+            : m_flag(1) {
             WORD wVersionRequested;
             WSADATA wsaData;
             int err;
@@ -137,10 +160,15 @@ namespace ohm {
         }
 
         ~SocketEnv() {
-            WSACleanup();
+            if (m_flag) WSACleanup();
         }
 
+    private:
+        uint8_t m_flag = 1;
 #else
+        SocketEnv(std::nullptr_t) {}
+        SocketEnv(SocketEnv &&) = default;
+        SocketEnv &operator=(SocketEnv &&) = default;
         SocketEnv() = default;
         ~SocketEnv() = default;
 #endif
@@ -328,13 +356,19 @@ namespace ohm {
 
         Socket &operator=(const Socket &) = delete;
 
+        Socket() : m_env(nullptr) {}
+
         Socket(Socket &&other) OHM_NOEXCEPT {
             std::swap(m_socket, other.m_socket);
+            m_env = std::move(other.m_env);
+            std::swap(m_address, other.m_address);
         }
 
         Socket &operator=(Socket &&other) OHM_NOEXCEPT {
             this->close();
             std::swap(m_socket, other.m_socket);
+            m_env = std::move(other.m_env);
+            std::swap(m_address, other.m_address);
             return *this;
         }
 
@@ -357,20 +391,20 @@ namespace ohm {
 
         void bind(const Address &address) {
             if (::bind(m_socket, address.addr(), address.len()) == SOCKET_ERROR) {
-                throw SocketException(GetLastSocketError("bind socket failed: "));
+                throw SocketSetupException(GetLastSocketError("bind socket failed: "));
             }
             m_address = AnyAddress(address.addr(), address.len());
         }
 
         void listen(int backlog = 16) {
             if (::listen(m_socket, backlog) == SOCKET_ERROR) {
-                throw SocketException(GetLastSocketError("listen socket failed: "));
+                throw SocketSetupException(GetLastSocketError("listen socket failed: "));
             }
         }
 
         void connect(const Address &address) {
             if (::connect(m_socket, address.addr(), address.len()) == SOCKET_ERROR) {
-                throw SocketException(GetLastSocketError("connect socket failed: "));
+                throw SocketSetupException(GetLastSocketError("connect socket failed: "));
             }
             m_address = AnyAddress(address.addr(), address.len());
         }
@@ -379,7 +413,7 @@ namespace ohm {
             AnyAddress addr;
             auto connected = ::accept(m_socket, addr.raddr(), &addr.rlen());
             if (connected == INVALID_SOCKET) {
-                throw SocketException(GetLastSocketError("accept socket failed: "));
+                throw SocketSetupException(GetLastSocketError("accept socket failed: "));
             }
             Socket tmp(connected);
             tmp.m_address = addr;
@@ -417,7 +451,7 @@ namespace ohm {
                 case Protocol::UDP:
                     return Type::DGRAM;
             }
-            throw SocketException(concat("Unknown protocol: ", int(protocol)));
+            throw SocketException(SocketError::INVAL, concat("Unknown protocol: ", int(protocol)));
         }
 
         static Protocol Type2Protocol(Type type) {
@@ -427,7 +461,7 @@ namespace ohm {
                 case Type::DGRAM:
                     return Protocol::UDP;
             }
-            throw SocketException(concat("Unknown type: ", int(type)));
+            throw SocketException(SocketError::INVAL, concat("Unknown type: ", int(type)));
         }
 
     private:
@@ -438,20 +472,22 @@ namespace ohm {
         Socket(Family domain, Type type, Protocol protocol) {
             m_socket = socket(int(domain), int(type), int(protocol));
             if (m_socket == INVALID_SOCKET) {
-                throw SocketException(GetLastSocketError("create socket failed: "));
+                throw SocketSetupException(GetLastSocketError("create socket failed: "));
             }
         }
 
         explicit Socket(SOCKET_T socket)
                 : m_socket(socket) {
             if (m_socket == INVALID_SOCKET) {
-                throw SocketException(concat("Go invalid socket."));
+                throw SocketException(SocketError::INVAL, concat("Got invalid socket."));
             }
         }
     };
 
     class Connection {
     public:
+        Connection() {}
+
         explicit Connection(std::shared_ptr<Socket> socket)
                 : m_socket(std::move(socket)) {}
 
