@@ -66,8 +66,21 @@ namespace ohm {
         TIMEDOUT = 0x300a,
         // A socket operation encountered a dead network.
         NETDOWN = 0x300b,
+        // An operation was attempted on something that is not a socket.
+        NOTSOCK = 0x300c,
         // A non-blocking socket operation could not be completed immediately.
-        WOULDBLOCK = 0x3001,
+        WOULDBLOCK = 0x4001,
+        // A request to send or receive data was disallowed because the socket is not connected
+        // and (when sending on a datagram socket using a sendto call) no address was supplied.
+        NOTCONN = 0x4002,
+        // A blocking operation was interrupted by a call to WSACancelBlockingCall.
+        INTR = 0x4003,
+        // A request to send or receive data was disallowed because the socket had already been shut down in
+        // that direction with a previous shutdown call.
+        SHUTDOWN = 0x4004,
+        // A message sent on a datagram socket was larger than the internal message buffer or some other network limit,
+        // or the buffer used to receive a datagram into was smaller than the datagram itself.
+        MSGSIZE = 0x4005,
         // The system detected an invalid pointer address in attempting to use a pointer argument in a call.
         FAULT = 0xF000,
         // Too many open sockets.
@@ -116,8 +129,13 @@ namespace ohm {
                 case WSAEHOSTUNREACH: return SocketError::HOSTUNREACH;
                 case WSAETIMEDOUT: return SocketError::TIMEDOUT;
                 case WSAENETDOWN: return SocketError::NETDOWN;
+                case WSAENOTSOCK: return SocketError::NOTSOCK;
                     // io error
                 case WSAEWOULDBLOCK: return SocketError::WOULDBLOCK;
+                case WSAENOTCONN: return SocketError::NOTCONN;
+                case WSAEINTR: return SocketError::INTR;
+                case WSAESHUTDOWN: return SocketError::SHUTDOWN;
+                case WSAEMSGSIZE: return SocketError::MSGSIZE;
                     // fault error
                 case WSAEFAULT: return SocketError::FAULT;
                 case WSAEMFILE: return SocketError::MFILE;
@@ -147,11 +165,16 @@ namespace ohm {
                 case ENETUNREACH: return SocketError::NETUNREACH;
                 case EHOSTUNREACH: return SocketError::HOSTUNREACH;
                 case ETIMEDOUT: return SocketError::TIMEDOUT;
+                case ENETDOWN: return SocketError::NETDOWN;
+                case ENOTSOCK: return SocketError::NOTSOCK;
                     // io error
                 case EWOULDBLOCK: return SocketError::WOULDBLOCK;
+                case ENOTCONN: return SocketError::NOTCONN;
+                case EINTR: return SocketError::INTR;
+                case ESHUTDOWN: return SocketError::SHUTDOWN;
+                case EMSGSIZE: return SocketError::MSGSIZE;
                     // fault error
                 case EFAULT: return SocketError::FAULT;
-                case ENETDOWN: return SocketError::NETDOWN;
                 case EMFILE: return SocketError::MFILE;
                 case ENOBUFS: return SocketError::NOBUFS;
             }
