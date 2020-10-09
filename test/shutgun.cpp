@@ -4,6 +4,7 @@
 
 #include "ohm/thread/shotgun.h"
 #include "ohm/print.h"
+#include "ohm/thread/canyon.h"
 
 int main() {
     ohm::Shotgun gun(10);

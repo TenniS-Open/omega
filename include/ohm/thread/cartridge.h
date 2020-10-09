@@ -24,6 +24,10 @@ namespace ohm {
             m_powder.join();
         }
 
+        Cartridge(const Cartridge &that) = delete;
+
+        const Cartridge &operator=(const Cartridge &that) = delete;
+
         /**
          * @brief fire Asynchronous build and fire bullet, first calls the bullet, then calls the shell.
          * @param signet the index to call `bullet(signet)` and `shell(signet)`
@@ -51,10 +55,6 @@ namespace ohm {
         }
 
     private:
-        Cartridge(const Cartridge &that) = delete;
-
-        const Cartridge &operator=(const Cartridge &that) = delete;
-
         void operating() {
             std::unique_lock<std::mutex> locker(m_fire_mutex);
             while (m_dry) {

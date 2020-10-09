@@ -30,6 +30,10 @@ namespace ohm {
             }
         }
 
+        Shotgun(const Shotgun &that) = delete;
+
+        const Shotgun &operator=(const Shotgun &that) = delete;
+
         /**
          * @brief fire Find ready cartridge, build bullet and fire.
          * @param bullet the work ready to run
@@ -110,10 +114,6 @@ namespace ohm {
         }
 
     private:
-        Shotgun(const Shotgun &that) = delete;
-
-        const Shotgun &operator=(const Shotgun &that) = delete;
-
         /**
          * @brief load Get cartridge ready to fire
          * @return Get ready cartridge
