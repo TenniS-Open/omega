@@ -489,7 +489,7 @@ namespace ohm {
 
     class Connection {
     public:
-        Connection() {}
+        Connection() = default;
 
         explicit Connection(std::shared_ptr<Socket> socket)
                 : m_socket(std::move(socket)) {}

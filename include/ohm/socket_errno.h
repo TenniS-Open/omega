@@ -81,6 +81,8 @@ namespace ohm {
         // A message sent on a datagram socket was larger than the internal message buffer or some other network limit,
         // or the buffer used to receive a datagram into was smaller than the datagram itself.
         MSGSIZE = 0x4005,
+        // Resource temporarily unavailable
+        AGAIN = 0x4006,
         // The system detected an invalid pointer address in attempting to use a pointer argument in a call.
         FAULT = 0xF000,
         // Too many open sockets.
@@ -173,6 +175,7 @@ namespace ohm {
                 case EINTR: return SocketError::INTR;
                 case ESHUTDOWN: return SocketError::SHUTDOWN;
                 case EMSGSIZE: return SocketError::MSGSIZE;
+                case EAGAIN: return SocketError::AGAIN;
                     // fault error
                 case EFAULT: return SocketError::FAULT;
                 case EMFILE: return SocketError::MFILE;
