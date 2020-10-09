@@ -2,6 +2,7 @@
 #define OMEGA_THREAD_SHOTGUN_H
 
 #include "cartridge.h"
+#include "../need.h"
 
 #include <vector>
 #include <deque>
@@ -12,22 +13,24 @@ namespace ohm {
  */
     class Shotgun {
     public:
+        using self = Shotgun;
+
         /**
          * @brief Shotgun
          * @param clip_size The cartridge number in clip. Number of threads
          */
         Shotgun(size_t clip_size)
-                : m_clip(clip_size) {
+                : m_clip(clip_size, nullptr) {
+            need _dispose(&self::dispose, this);
             for (int i = 0; i < static_cast<int>(clip_size); ++i) {
                 m_clip[i] = new Cartridge();
                 m_chest.push_back(i);   // push all cartridge into chest
             }
+            _dispose.release();
         }
 
         ~Shotgun() {
-            for (int i = 0; i < static_cast<int>(m_clip.size()); ++i) {
-                delete m_clip[i];
-            }
+            this->dispose();
         }
 
         Shotgun(const Shotgun &that) = delete;
@@ -134,6 +137,12 @@ namespace ohm {
             std::unique_lock<std::mutex> locker(m_chest_mutex);
             this->m_chest.push_back(signet);
             m_chest_cond.notify_one();
+        }
+
+        void dispose() {
+            for (int i = 0; i < static_cast<int>(m_clip.size()); ++i) {
+                delete m_clip[i];
+            }
         }
 
         std::vector<Cartridge *> m_clip;          ///< all cartridges
