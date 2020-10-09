@@ -133,7 +133,7 @@ namespace ohm {
         void recycling_cartridge(int signet) {
             std::unique_lock<std::mutex> locker(m_chest_mutex);
             this->m_chest.push_back(signet);
-            m_chest_cond.notify_all();
+            m_chest_cond.notify_one();
         }
 
         std::vector<Cartridge *> m_clip;          ///< all cartridges

@@ -19,6 +19,8 @@ namespace ohm {
 
     class Canyon {
     public:
+        using self = Canyon;
+
         enum Action {
             DISCARD,
             WAITING
@@ -28,6 +30,9 @@ namespace ohm {
                 : m_work(true), m_size(size), m_act(act) {
             this->m_core = std::thread(&Canyon::operating, this);
         }
+
+        explicit Canyon(Action act)
+                : self(-1, act) {}
 
         ~Canyon() {
             this->join();
@@ -40,7 +45,8 @@ namespace ohm {
 
         const Canyon &operator=(const Canyon &that) = delete;
 
-        template<typename FUNC>
+        template<typename FUNC,
+                typename=typename std::enable_if<can_be_bind<FUNC>::value>::type>
         void operator()(FUNC func) const {
             this->push(void_bind(func));
         }
@@ -69,7 +75,7 @@ namespace ohm {
                 }
             }
             m_task.push(op);
-            m_cond.notify_all();
+            m_cond.notify_one();
         }
 
         void operating() const {
@@ -80,7 +86,7 @@ namespace ohm {
                 auto func = m_task.front();
                 m_task.pop();
                 func();
-                m_cond.notify_all();
+                m_cond.notify_one();
             }
         }
 

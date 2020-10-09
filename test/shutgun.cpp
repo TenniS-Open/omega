@@ -8,8 +8,10 @@
 
 int main() {
     ohm::Shotgun gun(10);
+    srand(4482);
     for (int i = 0; i < 100; ++i) {
         gun.fire([i]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 1000));
             ohm::println(i);
         });
     }

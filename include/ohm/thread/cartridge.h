@@ -39,7 +39,7 @@ namespace ohm {
             this->m_signet = signet;
             this->m_bullet = bullet;
             this->m_shell = shell;
-            m_fire_cond.notify_all();
+            m_fire_cond.notify_one();
         }
 
         bool busy() {
@@ -64,7 +64,7 @@ namespace ohm {
                 if (m_shell) m_shell(m_signet);
                 m_bullet = nullptr;
                 m_shell = nullptr;
-                m_fire_cond.notify_all();
+                m_fire_cond.notify_one();
             }
         }
 
