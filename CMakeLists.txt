@@ -36,6 +36,7 @@ elseif (ANDROID)
 elseif (IOS)
 elseif (APPLE)
 elseif (UNIX)
+    link_libraries(pthread)
 else ()
 endif ()
 
