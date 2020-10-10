@@ -304,6 +304,10 @@ namespace ohm {
             m_threads->join();
         }
 
+        void size() const {
+            return m_actions.size();
+        }
+
     private:
         std::shared_ptr<IncreasingThreadPool> m_threads;
         std::vector<Action> m_actions;
