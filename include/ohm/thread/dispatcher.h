@@ -280,6 +280,7 @@ namespace ohm {
         }
 
         template<typename ...XArgs, typename=typename std::enable_if<
+                std::is_copy_assignable<std::tuple<XArgs...>>::value &&
                 std::is_same<void, decltype(std::declval<Action>()(std::declval<XArgs>()...))>::value>::type>
         void call(XArgs ...args) {
             m_threads->fire([=](int i) {
