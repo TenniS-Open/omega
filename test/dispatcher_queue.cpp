@@ -22,7 +22,7 @@ int main() {
         // oh.bind([=](int a) { print_value(i, a); });
     }
     for (int i = 0; i < 100; ++i) {
-        oh.call(i);
+        oh.push(i);
         ohm::println("thread-main: size=", oh.size());
     }
     // call join to wait all action finish.
