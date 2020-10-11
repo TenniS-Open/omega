@@ -8,7 +8,7 @@
 #include <queue>
 #include <ohm/print.h>
 
-#include "../thread/dispatcher.h"
+#include "dispatcher.h"
 
 namespace ohm {
     class QueueEnd : public std::exception {};
@@ -75,8 +75,13 @@ namespace ohm {
                 m_threads[0]->action(std::move(data));
                 return;
             }
-            if (m_limit > 0) {
-                while (m_deque.size() >= m_limit) m_cond_push.wait(_lock);
+            while (true) {
+                auto limit = m_limit.load();
+                if (limit > 0 && m_deque.size() >= limit) {
+                    m_cond_push.wait(_lock);
+                } else {
+                    break;
+                }
             }
             m_deque.push_front(std::move(data));
             m_cond_pop.notify_one();
@@ -133,6 +138,10 @@ namespace ohm {
             return tmp;
         }
 
+        void limit(int64_t size) {
+            m_limit = size;
+        }
+
     private:
         std::deque<T> m_deque;
         mutable std::mutex m_mutex;
@@ -141,7 +150,7 @@ namespace ohm {
         std::vector<std::shared_ptr<Thread>> m_threads;
         std::atomic<bool> m_running;
 
-        int64_t m_limit = -1;
+        std::atomic<int64_t> m_limit;
 
         void operating(Action action) {
             while (true) {

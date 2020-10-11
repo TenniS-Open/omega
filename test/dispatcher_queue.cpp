@@ -2,7 +2,7 @@
 // Created by kier on 2020/10/9.
 //
 
-#include "ohm/lego/dispatcher_queue.h"
+#include "ohm/thread/dispatcher_queue.h"
 #include "ohm/print.h"
 
 void print_value(int thread, int value) {
