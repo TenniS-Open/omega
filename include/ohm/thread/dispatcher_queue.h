@@ -77,7 +77,7 @@ namespace ohm {
             }
             while (true) {
                 auto limit = m_limit.load();
-                if (limit > 0 && m_deque.size() >= limit) {
+                if (limit > 0 && int64_t(m_deque.size()) >= limit) {
                     m_cond_push.wait(_lock);
                 } else {
                     break;
