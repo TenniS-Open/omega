@@ -46,16 +46,38 @@ namespace ohm {
             this->clear();
         }
 
+        /**
+         * Bind on action.
+         * If intime is true, the `push` function will directly call given aciton with out queue push.
+         * @tparam FUNC action function type
+         * @param func action function
+         * @param intime if true, push action will directly call `func` instead push to queue.
+         */
         template<typename FUNC, typename=typename std::enable_if<
                 std::is_constructible<Action, FUNC>::value>::type>
-        void bind(FUNC func) {
+        void bind(FUNC func, bool intime=false) {
             auto action = Action(func);
-            m_threads.emplace_back(std::make_shared<Thread>(action, &self::operating, this, action));
+            if (intime) {
+                this->m_intime_action = action;
+            } else {
+                this->m_intime_action = nullptr;
+                m_threads.emplace_back(std::make_shared<Thread>(action, &self::operating, this, action));
+            }
         }
 
+        /**
+         * bind N processor with action(first parameter shuold be thread-id)
+         * @tparam FUNC
+         * @param N number of thread, if N is 0, it means bind intime action
+         * @param func action function
+         */
         template<typename FUNC, typename=typename std::enable_if<
                 std::is_constructible<std::function<void(int, T)>, FUNC>::value>::type>
         void bind(size_t N, FUNC func) {
+            if (N == 0) {
+                bind(std::bind(func, 0, std::placeholders::_1), true);
+                return;
+            }
             for (size_t i = 0; i < N; ++i) {
                 auto action = [i, func](T t) {
                     func(int(i), t);
@@ -70,11 +92,11 @@ namespace ohm {
          * @param t
          */
         void push(T data) {
-            std::unique_lock<std::mutex> _lock(m_mutex);
-            if (m_threads.size() == 1) {
-                m_threads[0]->action(std::move(data));
+            if (m_intime_action) {
+                m_intime_action(std::move(data));
                 return;
             }
+            std::unique_lock<std::mutex> _lock(m_mutex);
             while (true) {
                 auto limit = m_limit.load();
                 if (limit > 0 && int64_t(m_deque.size()) >= limit) {
@@ -99,6 +121,7 @@ namespace ohm {
             m_running = false;
             m_cond_pop.notify_all();
             m_threads.clear();
+            m_intime_action = nullptr;
             m_running.store(true);
         }
 
@@ -149,6 +172,7 @@ namespace ohm {
         std::condition_variable m_cond_pop;     // has element to pop
         std::vector<std::shared_ptr<Thread>> m_threads;
         std::atomic<bool> m_running;
+        Action m_intime_action;
 
         std::atomic<int64_t> m_limit;
 
@@ -172,6 +196,30 @@ namespace ohm {
             }
         }
     };
+
+    template <typename RET, typename ...ARGS>
+    inline std::function<RET(ARGS...)> with_lock(const std::function<RET(ARGS...)> &func) {
+        std::shared_ptr<std::mutex> pmutex(new std::mutex);
+        return [pmutex, func](ARGS... args) -> RET{
+            std::unique_lock<std::mutex> _lock(*pmutex);
+            return func(args...);
+        };
+    }
+
+    template <typename ...ARGS>
+    inline std::function<void(ARGS...)> with_lock(const std::function<void(ARGS...)> &func) {
+        std::shared_ptr<std::mutex> pmutex(new std::mutex);
+        return [pmutex, func](ARGS... args) -> void{
+            std::unique_lock<std::mutex> _lock(*pmutex);
+            func(args...);
+        };
+    }
+
+    template <typename DECL, typename FUNC, typename=typename std::enable_if<
+            is_callable<FUNC, DECL>::value>::type>
+    inline std::function<DECL> with_lock(FUNC func) {
+        return with_lock(std::function<DECL>(func));
+    }
 }
 
 #endif //OMEGA_DISPATCHER_QUEUE_H

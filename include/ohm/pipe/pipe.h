@@ -110,12 +110,15 @@ namespace ohm {
         auto map11(size_t N, FUNC func) -> Pipe<typename is_pipe_mapper<FUNC, T>::mapped_type> {
             using mapped_type = typename is_pipe_mapper<FUNC, T>::mapped_type;
             Pipe<mapped_type> mapped;
-            for (decltype(N) i = 0; i < N; ++i) {
-                m_queue->bind([this, mapped, func](T data) {
-                    try {
-                        const_cast<Pipe<mapped_type> &>(mapped).push(func(data));
-                    } catch (PipeLeak) {}
-                });
+            auto processor = [this, mapped, func](T data) {
+                try {
+                    const_cast<Pipe<mapped_type> &>(mapped).push(func(data));
+                } catch (PipeLeak) {}
+            };
+            if (N == 0) {
+                m_queue->bind(processor, true);
+            } else {
+                for (decltype(N) i = 0; i < N; ++i) m_queue->bind(processor);
             }
             m_join_links->emplace_back([mapped]() { const_cast<Pipe<mapped_type> &>(mapped).join(); });
             return mapped;
@@ -140,16 +143,19 @@ namespace ohm {
         -> Pipe<typename has_iterator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value_type> {
             using mapped_type = typename has_iterator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value_type;
             Pipe<mapped_type> mapped;
-            for (decltype(N) i = 0; i < N; ++i) {
-                m_queue->bind([this, mapped, func](T data) {
-                    try {
-                        auto range = func(data);
-                        auto &pipe = const_cast<Pipe<mapped_type> &>(mapped);
-                        for (auto &out : range) {
-                            pipe.push(out);
-                        }
-                    } catch (PipeLeak) {}
-                });
+            auto processor = [this, mapped, func](T data) {
+                try {
+                    auto range = func(data);
+                    auto &pipe = const_cast<Pipe<mapped_type> &>(mapped);
+                    for (auto &out : range) {
+                        pipe.push(out);
+                    }
+                } catch (PipeLeak) {}
+            };
+            if (N == 0) {
+                m_queue->bind(processor, true);
+            } else {
+                for (decltype(N) i = 0; i < N; ++i) m_queue->bind(processor);
             }
             m_join_links->emplace_back([mapped]() { const_cast<Pipe<mapped_type> &>(mapped).join(); });
             return mapped;
@@ -174,18 +180,21 @@ namespace ohm {
         -> Pipe<typename is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::return_type> {
             using mapped_type = typename is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::return_type;
             Pipe<mapped_type> mapped;
-            for (decltype(N) i = 0; i < N; ++i) {
-                m_queue->bind([this, mapped, func](T data) {
+            auto processor = [this, mapped, func](T data) {
+                try {
+                    auto generator = func(data);
+                    auto &pipe = const_cast<Pipe<mapped_type> &>(mapped);
                     try {
-                        auto generator = func(data);
-                        auto &pipe = const_cast<Pipe<mapped_type> &>(mapped);
-                        try {
-                            while (true) {
-                                pipe.push(generator());
-                            }
-                        } catch (PipeBreak) {}
-                    } catch (PipeLeak) {}
-                });
+                        while (true) {
+                            pipe.push(generator());
+                        }
+                    } catch (PipeBreak) {}
+                } catch (PipeLeak) {}
+            };
+            if (N == 0) {
+                m_queue->bind(processor, true);
+            } else {
+                for (decltype(N) i = 0; i < N; ++i) m_queue->bind(processor);
             }
             m_join_links->emplace_back([mapped]() { const_cast<Pipe<mapped_type> &>(mapped).join(); });
             return mapped;
@@ -275,7 +284,7 @@ namespace ohm {
                 (std::is_copy_constructible<FUNC>::value ||
                  std::is_move_constructible<FUNC>::value)>::type>
         auto map(FUNC func) -> Pipe<typename is_pipe_mapper<FUNC, T>::mapped_type> {
-            return this->map(1, func);
+            return this->map(0, func);
         }
 
         /**
@@ -301,7 +310,7 @@ namespace ohm {
          * `SO` do not capture parent or parent'
          */
         Pipe<T> map(const std::function<void(T &)> &mapper) {
-            return this->map(1, mapper);
+            return this->map(0, mapper);
         }
 
         /**
@@ -314,12 +323,15 @@ namespace ohm {
                 (std::is_copy_constructible<FUNC>::value ||
                  std::is_move_constructible<FUNC>::value)>::type>
         void seal(size_t N, FUNC func) {
-            for (decltype(N) i = 0; i < N; ++i) {
-                m_queue->bind([this, func](T data) {
-                    try {
-                        func(data);
-                    } catch (PipeLeak) {}
-                });
+            auto processor = [this, func](T data) {
+                try {
+                    func(data);
+                } catch (PipeLeak) {}
+            };
+            if (N == 0) {
+                m_queue->bind(processor, true);
+            } else {
+                for (decltype(N) i = 0; i < N; ++i) m_queue->bind(processor);
             }
         }
 
@@ -332,7 +344,7 @@ namespace ohm {
                 (std::is_copy_constructible<FUNC>::value ||
                  std::is_move_constructible<FUNC>::value)>::type>
         void seal(FUNC func) {
-            seal(1, func);
+            seal(0, func);
         }
 
         /**

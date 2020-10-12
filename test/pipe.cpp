@@ -5,6 +5,7 @@
 #include "ohm/pipe/pipe.h"
 #include "ohm/print.h"
 #include "ohm/range.h"
+#include "ohm/type_name.h"
 
 int main() {
     ohm::Tap<int> input(ohm::range(0, 10));
@@ -17,8 +18,8 @@ int main() {
 
     // 2. convert data, there are 3 types data converter
     // 2.1 convert data from 1 to 1
-    auto mapper_converter11 = [](int a) -> float {
-        return float(a) / 2;
+    auto mapper_converter11 = [](float a) -> float {
+        return a / 2;
     };
 
     // 2.2 convert data from 1 to N
@@ -40,6 +41,8 @@ int main() {
     input.limit(50)
             .map(3, mapper_inplace).limit(10)
             .map(5, mapper_converter1x).limit(10)
+                    // use if use 0 data processor, the converter will called by parent thread.
+            .map(0, mapper_converter11)
             .seal(20, saver);
 
     input.loop();
