@@ -44,11 +44,25 @@ namespace ohm {
         using mapped_type = typename traits<decltype(std::declval<FUNC>()(std::declval<ARG>()))>::type;
     };
 
+    template<typename FUNC, typename=void>
+    struct is_data_generator {
+    public:
+        static constexpr bool value = false;
+        using mapped_type = void;
+    };
+
+    template<typename FUNC>
+    struct is_data_generator<FUNC, typename std::enable_if<
+            !std::is_same<void, decltype(std::declval<FUNC>()())>::value>::type> {
+    public:
+        static constexpr bool value = true;
+        using forward_return_type = decltype(std::declval<FUNC>()());
+        using return_type = typename remove_cr<forward_return_type>::type;
+    };
+
     /**
      * \brief Pipe for data process.
-     * Support data discarding.
-     * Comming feature: generate data when process.
-     * TODO: support one input to multi output.
+     * Support data discarding and generate data when process.
      * @tparam T processing data type
      */
     template<typename T>
@@ -58,8 +72,7 @@ namespace ohm {
         using Type = T;
 
         Pipe()
-                : m_queue(new DispatcherQueue<T>)
-                , m_join_links(new std::vector<std::function<void(void)>>) {}
+                : m_queue(new DispatcherQueue<T>), m_join_links(new std::vector<std::function<void(void)>>) {}
 
         ~Pipe() = default;
 
@@ -84,7 +97,7 @@ namespace ohm {
          *
          * @tparam FUNC map function type
          * @param N number of thread using
-         * @param func map function
+         * @param func map function, generate 1 data from 1 data. throw PipeLeak for no data generated
          * @return mapped pipe, called child pipe.
          * Notice the child pipe has already relied on this parent pipe.
          * `SO` do not capture parent or parent's parent in map API of child pipe.
@@ -94,7 +107,7 @@ namespace ohm {
                 is_pipe_mapper<FUNC, T>::value &&
                 (std::is_copy_constructible<FUNC>::value ||
                  std::is_move_constructible<FUNC>::value)>::type>
-        auto map(size_t N, FUNC func) -> Pipe<typename is_pipe_mapper<FUNC, T>::mapped_type> {
+        auto map11(size_t N, FUNC func) -> Pipe<typename is_pipe_mapper<FUNC, T>::mapped_type> {
             using mapped_type = typename is_pipe_mapper<FUNC, T>::mapped_type;
             Pipe<mapped_type> mapped;
             for (decltype(N) i = 0; i < N; ++i) {
@@ -110,8 +123,148 @@ namespace ohm {
 
         /**
          *
+         * @tparam FUNC map function type
          * @param N number of thread using
-         * @param func map function
+         * @param func map function, return iterable range value, like vector or list
+         * @return mapped pipe, called child pipe.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_mapper<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                 std::is_move_constructible<FUNC>::value) &&
+                is_iterable<typename is_pipe_mapper<FUNC, T>::mapped_type>::value>::type>
+        auto map1n(size_t N, FUNC func)
+        -> Pipe<typename has_iterator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value_type> {
+            using mapped_type = typename has_iterator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value_type;
+            Pipe<mapped_type> mapped;
+            for (decltype(N) i = 0; i < N; ++i) {
+                m_queue->bind([this, mapped, func](T data) {
+                    try {
+                        auto range = func(data);
+                        auto &pipe = const_cast<Pipe<mapped_type> &>(mapped);
+                        for (auto &out : range) {
+                            pipe.push(out);
+                        }
+                    } catch (PipeLeak) {}
+                });
+            }
+            m_join_links->emplace_back([mapped]() { const_cast<Pipe<mapped_type> &>(mapped).join(); });
+            return mapped;
+        }
+
+        /**
+         *
+         * @tparam FUNC map function type
+         * @param N number of thread using
+         * @param func map function, return data generator(function return one data for each call).
+         * @return mapped pipe, called child pipe.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_mapper<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                 std::is_move_constructible<FUNC>::value) &&
+                is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value>::type>
+        auto map1x(size_t N, FUNC func)
+        -> Pipe<typename is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::return_type> {
+            using mapped_type = typename is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::return_type;
+            Pipe<mapped_type> mapped;
+            for (decltype(N) i = 0; i < N; ++i) {
+                m_queue->bind([this, mapped, func](T data) {
+                    try {
+                        auto generator = func(data);
+                        auto &pipe = const_cast<Pipe<mapped_type> &>(mapped);
+                        try {
+                            while (true) {
+                                pipe.push(generator());
+                            }
+                        } catch (PipeBreak) {}
+                    } catch (PipeLeak) {}
+                });
+            }
+            m_join_links->emplace_back([mapped]() { const_cast<Pipe<mapped_type> &>(mapped).join(); });
+            return mapped;
+        }
+
+        struct IsMap11 {
+        };
+
+        struct IsMap1n {
+        };
+
+        struct IsMap1x {
+        };
+
+        /**
+         *
+         * @tparam FUNC map function type
+         * @param N number of thread using
+         * @param func map function, generate 1 data from 1 data. throw PipeLeak for no data generated
+         * @return mapped pipe, called child pipe.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_mapper<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                 std::is_move_constructible<FUNC>::value) &&
+                !is_iterable<typename is_pipe_mapper<FUNC, T>::mapped_type>::value &&
+                !is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value>::type>
+        auto map(size_t N, FUNC func, IsMap11= {})
+        -> Pipe<typename is_pipe_mapper<FUNC, T>::mapped_type> {
+            return map11(N, func);
+        }
+
+        /**
+         *
+         * @tparam FUNC map function type
+         * @param N number of thread using
+         * @param func map function, return iterable range value, like vector or list
+         * @return mapped pipe, called child pipe.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_mapper<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                 std::is_move_constructible<FUNC>::value) &&
+                is_iterable<typename is_pipe_mapper<FUNC, T>::mapped_type>::value>::type>
+        auto map(size_t N, FUNC func, IsMap1n= {})
+        -> Pipe<typename has_iterator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value_type> {
+            return map1n(N, func);
+        }
+
+        /**
+         *
+         * @tparam FUNC map function type
+         * @param N number of thread using
+         * @param func map function, return data generator(function return one data for each call).
+         * @return mapped pipe, called child pipe.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_mapper<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                 std::is_move_constructible<FUNC>::value) &&
+                is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value>::type>
+        auto map(size_t N, FUNC func, IsMap1x= {})
+        -> Pipe<typename is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::return_type> {
+            return map1x(N, func);
+        }
+
+        /**
+         *
+         * @param N number of thread using
+         * @param func map function, could be map11 map1n and map1x function
          * @return mapped pipe, called child pipe.
          * Notice the child pipe has already relied on this parent pipe.
          * `SO` do not capture parent or parent's parent in map API of child pipe.
@@ -221,6 +374,75 @@ namespace ohm {
         using Type = void;
     };
 
+    template<typename T, typename=typename std::enable_if<
+            std::is_copy_constructible<T>::value>::type>
+    inline std::shared_ptr<T> capture(const T &data) {
+        return std::make_shared<T>(data);
+    }
+
+    template<typename T, typename=typename std::enable_if<
+            !std::is_reference<T>::value &&
+            std::is_move_constructible<T>::value>::type>
+    inline std::shared_ptr<T> capture(T &&data) {
+        return std::make_shared<T>(std::move(data));
+    }
+
+    template<typename T>
+    inline std::function<T()>
+    make_generator(std::initializer_list<T> range) {
+        struct Local {
+            std::initializer_list<T> range;
+            typename std::initializer_list<T>::iterator it;
+
+            Local(std::initializer_list<T> range)
+                    : range(std::move(range)) {
+                it = this->range.begin();
+            }
+        };
+        auto tmp = std::make_shared<Local>(std::move(range));
+        return [tmp]() -> T {
+            if (tmp->it == tmp->range.end()) throw PipeBreak();
+            return *(tmp->it)++;
+        };
+    }
+
+    template<typename Range, typename=typename std::enable_if<
+            is_iterable<Range>::value>::type>
+    inline std::function<typename has_iterator<Range>::value_type()>
+    make_generator(Range range) {
+        struct Local {
+            Range range;
+            typename remove_cr<decltype(std::declval<Range>().begin())>::type it;
+
+            Local(Range range)
+                    : range(std::move(range)) {
+                it = this->range.begin();
+            }
+        };
+        auto tmp = std::make_shared<Local>(std::move(range));
+        return [tmp]() -> typename has_iterator<Range>::value_type {
+            if (tmp->it == tmp->range.end()) throw PipeBreak();
+            return *(tmp->it)++;
+        };
+    }
+
+    template<typename It, typename=typename std::enable_if<
+            has_iterator_tag<It, std::input_iterator_tag>::value>::type>
+    inline std::function<typename std::iterator_traits<It>::value_type()>
+    make_generator(It beg, It end) {
+        struct Local {
+            It end;
+            It it;
+        };
+        auto tmp = std::make_shared<Local>();
+        tmp->end = end;
+        tmp->it = beg;
+        return [tmp]() -> typename std::iterator_traits<It>::value_type {
+            if (tmp->it == tmp->end) throw PipeBreak();
+            return *(tmp->it)++;
+        };
+    }
+
     template<typename T>
     class Tap : public Pipe<T> {
     public:
@@ -247,8 +469,11 @@ namespace ohm {
          */
         template<typename K, typename=typename std::enable_if<
                 std::is_constructible<K, T>::value>::type>
-        explicit Tap(const std::initializer_list<K> &range)
-                : self(range.begin(), range.end()) {}
+        explicit Tap(std::initializer_list<K> range)
+                : self(make_generator(std::move(range))) {}
+
+        struct IsRange {
+        };
 
         /**
          * give initializer_list to generate
@@ -258,8 +483,8 @@ namespace ohm {
         template<typename Range, typename=typename std::enable_if<
                 is_iterable<Range>::value &&
                 std::is_convertible<typename has_iterator<Range>::forward_value_type, T>::value>::type>
-        explicit Tap(const Range &range, int= 0)
-                : self(range.begin(), range.end()) {}
+        explicit Tap(Range range, IsRange= {})
+                : self(make_generator(std::move(range))) {}
 
         /**
          * give iterator piar to generate data
@@ -270,16 +495,8 @@ namespace ohm {
         template<typename It, typename=typename std::enable_if<
                 has_iterator_tag<It, std::input_iterator_tag>::value &&
                 std::is_convertible<typename std::iterator_traits<It>::reference, T>::value>::type>
-        explicit Tap(It beg, It end) {
-            auto generator = [=]() {
-                static auto it = beg;
-                if (it == end) throw PipeBreak();
-                auto tmp = *it;
-                ++it;
-                return tmp;
-            };
-            m_generator = generator;
-        }
+        explicit Tap(It beg, It end)
+                : self(make_generator(beg, end)) {}
 
         /**
          * generate one data to queue.
