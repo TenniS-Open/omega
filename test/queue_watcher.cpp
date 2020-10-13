@@ -13,10 +13,6 @@ void print_value(int thread, int value) {
     // ohm::println("thread-", thread, ": value = ", value);
 };
 int main() {
-    ohm::println(ohm::classname<std::decay<const int &>::type>());
-    ohm::println(ohm::classname<std::decay<int &>::type>());
-    ohm::println(ohm::classname<std::decay<int &&>::type>());
-
     srand(4482);
     ohm::QueueWatcher qw;
     ohm::DispatcherQueue<int> oh(50);
@@ -29,7 +25,7 @@ int main() {
         // oh.bind([=](int a) { print_value(i, a); });
     }
 
-    ohm::LoopThread log([&]() {
+    ohm::LoopThread log(1, [&]() {
         auto report = qw.report();
         ohm::print("I/", report.in.dps,
                    " [", report.count, "/", oh.capacity(), "] ",

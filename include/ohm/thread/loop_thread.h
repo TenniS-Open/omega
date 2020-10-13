@@ -25,13 +25,44 @@ namespace ohm {
             DEAD,
         };
 
-        template<typename _Callable, typename... _Args, typename=typename std::enable_if<
-                can_be_bind<typename std::decay<_Callable>::type,
-                        typename std::decay<_Args>::type...>::value>::type>
-        explicit LoopThread(_Callable &&_f, _Args &&... _args)
-                : m_action(std::forward<_Callable>(_f), std::forward<_Args>(_args)...), m_status(RUNNING) {
+        struct FPS {
+            int fps;
+
+            FPS(int fps) : fps(fps) {}
+        };
+
+        template<typename... Args>
+        struct is_action
+                : public std::integral_constant<bool,
+                        can_be_bind<typename std::decay<Args>::type...>::value> {
+        };
+
+        template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
+                is_action<FUNC, ARGS...>::value>::type>
+        explicit LoopThread(Status status, FPS fps, FUNC &&func, ARGS &&... args)
+                : m_action(std::forward<FUNC>(func), std::forward<ARGS>(args)...), m_status(status), m_fps(fps.fps) {
             m_thread = std::thread(&self::operating, this);
         }
+
+        template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
+                is_action<FUNC, ARGS...>::value>::type>
+        explicit LoopThread(Status status, FUNC &&func, ARGS &&... args)
+                : self(status, FPS(0), std::forward<FUNC>(func), std::forward<ARGS>(args)...) {}
+
+        template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
+                is_action<FUNC, ARGS...>::value>::type>
+        explicit LoopThread(int fps, FUNC &&func, ARGS &&... args)
+                : self(RUNNING, FPS(fps), std::forward<FUNC>(func), std::forward<ARGS>(args)...) {}
+
+        template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
+                is_action<FUNC, ARGS...>::value>::type>
+        explicit LoopThread(FPS fps, FUNC &&func, ARGS &&... args)
+                : self(RUNNING, fps, std::forward<FUNC>(func), std::forward<ARGS>(args)...) {}
+
+        template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
+                is_action<FUNC, ARGS...>::value>::type>
+        explicit LoopThread(FUNC &&func, ARGS &&... args)
+                : self(RUNNING, FPS(0), std::forward<FUNC>(func), std::forward<ARGS>(args)...) {}
 
         ~LoopThread() {
             dispose();
@@ -92,11 +123,22 @@ namespace ohm {
             join();
         }
 
+        void setFPS(int fps) {
+            m_fps = fps;
+        }
+
+        int getFPS() {
+            return m_fps;
+        }
+
     private:
         std::thread m_thread;
         VoidOperator m_action;
         std::condition_variable_any m_wake_cond;
         std::atomic<int> m_status;
+        std::atomic<int> m_fps;
+
+        time_point m_last_tick;
 
         struct {
             void lock() {}
@@ -106,6 +148,7 @@ namespace ohm {
 
         void operating() {
             std::unique_lock<decltype(m_mutex)> _lock(m_mutex);
+            delay();    // first time would no delay, but init delay action.
             while (true) {
                 switch (m_status.load()) {
                     default: {
@@ -113,6 +156,7 @@ namespace ohm {
                     }
                     case RUNNING: {
                         m_action();
+                        delay();
                         break;
                     }
                     case SUSPEND: {
@@ -124,6 +168,18 @@ namespace ohm {
                     }
                 }
             }
+        }
+
+        void delay() {
+            auto now_tick = now();
+            int fps = m_fps;
+            if (fps == 0) {
+                m_last_tick = now_tick; // still save last tick
+                return;
+            }
+            auto wait_until = m_last_tick + time::us(1000000 / fps);
+            m_last_tick = now_tick > wait_until ? now_tick : wait_until;
+            std::this_thread::sleep_until(wait_until);
         }
     };
 }
