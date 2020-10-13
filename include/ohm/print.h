@@ -86,7 +86,7 @@ namespace ohm {
     struct __has_defined_printable {
     private:
         template<typename U>
-        static auto Check(int) -> decltype(std::declval<printable<typename remove_cr<U>::type>>().print(
+        static auto Check(int) -> decltype(std::declval<printable<typename std::decay<U>::type>>().print(
                 std::declval<std::ostream &>(), std::declval<U>()), std::declval<std::ostream &>());
 
         template<typename U>
@@ -127,7 +127,7 @@ namespace ohm {
             has_defined_printable<T>::value,
             std::ostream &>::type
     stream_print(std::ostream &out, const T &t) {
-        printable<typename remove_cr<T>::type>().print(out, t);
+        printable<typename std::decay<T>::type>().print(out, t);
         return out;
     }
 
@@ -279,7 +279,7 @@ namespace ohm {
                 } else {
                     comma = true;
                 }
-                static_assert(is_printable<typename remove_cr<decltype(*it)>::type>::value, "What a Terrible Failure!");
+                static_assert(is_printable<typename std::decay<decltype(*it)>::type>::value, "What a Terrible Failure!");
                 stream_print(out, *it);
             }
             out << "]";

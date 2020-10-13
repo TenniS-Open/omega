@@ -41,9 +41,9 @@ namespace ohm {
 
     template<typename T>
     struct is_var_element<T, typename std::enable_if<
-            notation::is_notation_type<typename notation::remove_cr<T>::type>::value &&
+            notation::is_notation_type<typename std::decay<T>::type>::value &&
             std::is_constructible<typename notation::type_type<
-            typename notation::remove_cr<T>::type>::type, T>::value>::type> : public std::true_type {
+            typename std::decay<T>::type>::type, T>::value>::type> : public std::true_type {
     };
 
     template <typename T>
@@ -273,7 +273,7 @@ namespace ohm {
                 is_var_element<T>::value && !std::is_pointer<T>::value
                 , Var>::type &
         operator=(T &&t) {
-            using Element = typename notation::type_type<typename notation::remove_cr<T>::type>::type;
+            using Element = typename notation::type_type<typename std::decay<T>::type>::type;
             // TODO: check if there is need to update new
             m_var = std::make_shared<Element>(std::forward<T>(t));
             if (m_notifier) {
@@ -285,10 +285,10 @@ namespace ohm {
         template<typename T>
         typename std::enable_if<
                 !is_var_element<T>::value &&
-                std::is_base_of<notation::Element, typename notation::remove_cr<T>::type>::value
+                std::is_base_of<notation::Element, typename std::decay<T>::type>::value
                 , Var>::type &
         operator=(T &&t) {
-            using Element = typename notation::remove_cr<T>::type;
+            using Element = typename std::decay<T>::type;
             m_var = std::make_shared<Element>(std::forward<T>(t));
             if (m_notifier) {
                 m_notifier(m_var);
@@ -299,7 +299,7 @@ namespace ohm {
         template <typename T>
         typename std::enable_if<
                 !is_var_element<T>::value &&
-                !std::is_same<Var, typename notation::remove_cr<T>::type>::value &&
+                !std::is_same<Var, typename std::decay<T>::type>::value &&
                 std::is_integral<T>::value, Var>::type &
         operator=(T i) {
             return this->operator=(typename notation::other_int<T>::type(i));
@@ -308,7 +308,7 @@ namespace ohm {
         template <typename T>
         typename std::enable_if<
                 !is_var_element<T>::value &&
-                !std::is_same<Var, typename notation::remove_cr<T>::type>::value &&
+                !std::is_same<Var, typename std::decay<T>::type>::value &&
                 std::is_constructible<std::string, T>::value
                 , Var>::type &
         operator=(T &&t) {
@@ -374,14 +374,14 @@ namespace ohm {
         }
         template<typename T, typename=typename std::enable_if<
                 std::is_constructible<std::string, T>::value &&
-                !std::is_same<std::string, typename notation::remove_cr<T>::type>::value>::type>
+                !std::is_same<std::string, typename std::decay<T>::type>::value>::type>
         Var operator[](T &&t) {
             return this->operator[](std::string(std::forward<T>(t)));
         }
 
         template<typename T, typename=typename std::enable_if<
                 std::is_constructible<std::string, T>::value &&
-                !std::is_same<std::string, typename notation::remove_cr<T>::type>::value>::type>
+                !std::is_same<std::string, typename std::decay<T>::type>::value>::type>
         Var operator[](T &&t) const {
             return this->operator[](std::string(std::forward<T>(t)));
         }

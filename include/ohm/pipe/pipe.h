@@ -57,7 +57,7 @@ namespace ohm {
     public:
         static constexpr bool value = true;
         using forward_return_type = decltype(std::declval<FUNC>()());
-        using return_type = typename remove_cr<forward_return_type>::type;
+        using return_type = typename std::decay<forward_return_type>::type;
     };
 
     /**
@@ -424,7 +424,7 @@ namespace ohm {
     make_generator(Range range) {
         struct Local {
             Range range;
-            typename remove_cr<decltype(std::declval<Range>().begin())>::type it;
+            typename std::decay<decltype(std::declval<Range>().begin())>::type it;
 
             Local(Range range)
                     : range(std::move(range)) {

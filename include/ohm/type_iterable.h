@@ -26,7 +26,7 @@ namespace ohm {
 
     public:
         using forward_type = decltype(Type<T>(0));
-        using type = typename remove_cr<forward_type>::type;
+        using type = typename std::decay<forward_type>::type;
         static constexpr bool value = std::is_same<decltype(Check<T>(0)), std::true_type>::value;
     };
 
@@ -47,7 +47,7 @@ namespace ohm {
 
     public:
         using forward_type = decltype(Type<T>(0));
-        using type = typename remove_cr<forward_type>::type;
+        using type = typename std::decay<forward_type>::type;
         static constexpr bool value = std::is_same<decltype(Check<T>(0)), std::true_type>::value;
     };
 
@@ -101,7 +101,7 @@ namespace ohm {
     public:
         static constexpr bool value = true;
         using forward_value_type = decltype(*std::declval<T>().begin());
-        using value_type = typename remove_cr<forward_value_type>::type;
+        using value_type = typename std::decay<forward_value_type>::type;
     };
 
 

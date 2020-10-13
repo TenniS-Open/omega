@@ -23,7 +23,7 @@ namespace ohm {
 
     public:
         using forward_return_type = decltype(Return<T>(0));
-        using return_type = typename remove_cr<forward_return_type>::type;
+        using return_type = typename std::decay<forward_return_type>::type;
         static constexpr bool value = !std::is_same<forward_return_type, void>::value;
     };
 
@@ -38,7 +38,7 @@ namespace ohm {
     public:
         using T = typename is_mapper_of<FUNC, typename std::iterator_traits<Iter>::value_type>::forward_return_type;
         using value_type = T;
-        using iterator_value_type = typename remove_cr<T>::type;
+        using iterator_value_type = typename std::decay<T>::type;
         using iterator_difference_type = typename std::iterator_traits<Iter>::difference_type;
         using iterator_pointer = std::conditional<
                 std::is_reference<T>::value,

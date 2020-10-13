@@ -81,7 +81,7 @@ namespace ohm {
     };
 
     // template<typename _It>
-    // inline auto __hidden_tuple_it_star_value() -> typename remove_cr<decltype(*std::declval<_It>())>::type;
+    // inline auto __hidden_tuple_it_star_value() -> typename std::decay<decltype(*std::declval<_It>())>::type;
 
     template<typename T>
     struct __tuple_it_star_type;
