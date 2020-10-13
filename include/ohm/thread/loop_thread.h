@@ -46,6 +46,11 @@ namespace ohm {
 
         template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
                 is_action<FUNC, ARGS...>::value>::type>
+        explicit LoopThread(FPS fps, Status status, FUNC &&func, ARGS &&... args)
+                : self(status, fps, std::forward<FUNC>(func), std::forward<ARGS>(args)...) {}
+
+        template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
+                is_action<FUNC, ARGS...>::value>::type>
         explicit LoopThread(Status status, FUNC &&func, ARGS &&... args)
                 : self(status, FPS(0), std::forward<FUNC>(func), std::forward<ARGS>(args)...) {}
 
