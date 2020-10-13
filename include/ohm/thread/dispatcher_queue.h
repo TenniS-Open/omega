@@ -26,7 +26,7 @@ namespace ohm {
         public:
             template<typename... Args, typename = typename std::enable_if<
                     std::is_constructible<std::thread, Args...>::value>::type>
-            Thread(Action action, Args... args)
+            explicit Thread(Action action, Args... args)
                 : thread(args...)
                 , action(action) {}
 
@@ -38,8 +38,13 @@ namespace ohm {
             Action action;
         };
 
+        /**
+         * Construct queue, set `limit` of queue max size.
+         * @param limit
+         */
         explicit DispatcherQueue(int64_t limit = -1)
-                : m_running(true), m_limit(limit) {
+                : m_running(true), m_limit(limit)
+                , m_in_action([](){}), m_out_action([](){}) {
         }
 
         ~DispatcherQueue() {
@@ -87,9 +92,9 @@ namespace ohm {
         }
 
         /**
-         * add data to queue, if only one thread with action.
+         * Add data to queue, if zero thread with action.
          * this the data will invoke in this function.
-         * @param t
+         * @param data push data
          */
         void push(T data) {
             if (m_intime_action) {
@@ -107,6 +112,7 @@ namespace ohm {
             }
             m_deque.push_front(std::move(data));
             m_cond_pop.notify_one();
+            m_in_action();
         }
 
         /**
@@ -117,6 +123,9 @@ namespace ohm {
             while (!m_deque.empty()) m_cond_push.wait(_lock);
         }
 
+        /**
+         * Clear all the binded actions.
+         */
         void clear() {
             m_running = false;
             m_cond_pop.notify_all();
@@ -158,11 +167,43 @@ namespace ohm {
             auto tmp = m_deque.back();
             m_deque.pop_back();
             m_cond_push.notify_one();
+            m_out_action();
             return tmp;
         }
 
+        /**
+         * Return queue limit size, return -1 if no limits
+         * @return queue limit size
+         */
+        int64_t capacity() {
+            return m_limit;
+        }
+
+        /**
+         * set queue limit size, if queue size equal or greater than limit, `push` would block.
+         * @param size limit size
+         */
         void limit(int64_t size) {
             m_limit = size;
+        }
+
+        /**
+         * Set IO action, action will called when data input or output.
+         * @param in_action called after data push
+         * @param out_action called after data pop
+         */
+        void set_io_action(const std::function<void()> &in_action,
+                           const std::function<void()> &out_action) {
+            m_in_action = in_action;
+            m_out_action = out_action;
+        }
+
+        /**
+         * Clear IO action.
+         */
+        void clear_io_action() {
+            m_in_action = []() {};
+            m_out_action = []() {};
         }
 
     private:
@@ -173,6 +214,9 @@ namespace ohm {
         std::vector<std::shared_ptr<Thread>> m_threads;
         std::atomic<bool> m_running;
         Action m_intime_action;
+
+        std::function<void()> m_in_action;
+        std::function<void()> m_out_action;
 
         std::atomic<int64_t> m_limit;
 
@@ -191,6 +235,7 @@ namespace ohm {
                 auto tmp = m_deque.back();
                 m_deque.pop_back();
                 m_cond_push.notify_one();
+                m_out_action();
                 _lock.unlock();
                 action(tmp);
             }
@@ -220,6 +265,7 @@ namespace ohm {
     inline std::function<DECL> with_lock(FUNC func) {
         return with_lock(std::function<DECL>(func));
     }
+
 }
 
 #endif //OMEGA_DISPATCHER_QUEUE_H

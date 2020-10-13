@@ -52,10 +52,18 @@ namespace ohm {
 
             Report result = {};
             result.count = count;
-            result.in.dps = in_each_spent_time == 0 ? 0 : float(1000) / in_each_spent_time;
-            result.out.dps = out_each_spent_time == 0 ? 0 : float(1000) / out_each_spent_time;
-            result.in.waited_time = time::ms(now_time_point - in_last_time_point);
-            result.out.waited_time = time::ms(now_time_point - out_last_time_point);
+            result.in.dps = in_each_spent_time == 0
+                    ? 0
+                    : float(1000) / in_each_spent_time;
+            result.out.dps = out_each_spent_time == 0
+                    ? 0
+                    : float(1000) / out_each_spent_time;
+            result.in.waited_time = in_last_time_point == 0
+                    ? time::ms(0)
+                    : time::ms(now_time_point - in_last_time_point);
+            result.out.waited_time = in_last_time_point == 0
+                    ? time::ms(0)
+                    : time::ms(now_time_point - out_last_time_point);
 
             return result;
         }
@@ -97,20 +105,19 @@ namespace ohm {
         using self = QueueWatcher;
         using Report = InOutCounter::Report;
 
+        QueueWatcher()
+            : m_counter(new InOutCounter) {}
+
         std::function<void()> input_ticker() {
-            std::weak_ptr<InOutCounter> weak_counter = m_counter;
-            return [weak_counter]() {
-                auto counter = weak_counter.lock();
-                if (!counter) return;
+            auto counter = m_counter;
+            return [counter]() {
                 counter->in();
             };
         }
 
         std::function<void()> output_ticker() {
-            std::weak_ptr<InOutCounter> weak_counter = m_counter;
-            return [weak_counter]() {
-                auto counter = weak_counter.lock();
-                if (!counter) return;
+            auto counter = m_counter;
+            return [counter]() {
                 counter->out();
             };
         }
