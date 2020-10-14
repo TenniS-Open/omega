@@ -10,6 +10,8 @@
 
 #include "dispatcher.h"
 
+#include "../time.h"
+
 namespace ohm {
     class QueueEnd : public std::exception {};
 
@@ -191,6 +193,7 @@ namespace ohm {
          * Set IO action, action will called when data input or output.
          * @param in_action called after data push
          * @param out_action called after data pop
+         * @note only can be called when on data processing
          */
         void set_io_action(const std::function<void()> &in_action,
                            const std::function<void()> &out_action) {
@@ -200,10 +203,36 @@ namespace ohm {
 
         /**
          * Clear IO action.
+         * @note only can be called when on data processing
          */
         void clear_io_action() {
             m_in_action = []() {};
             m_out_action = []() {};
+        }
+
+        /**
+         * Set time reporter, it will report each process time to reporter
+         * @param reporter time reporter
+         * @note only can be called when on data processing
+         */
+        void set_time_reporter(const std::function<void(time::ms)> &reporter) {
+            m_action_report = reporter;
+        }
+
+        /**
+         * Clear IO action.
+         * @note only can be called when on data processing
+         */
+        void clear_time_reporter() {
+            m_action_report = nullptr;
+        }
+
+        /**
+         * get number of threads
+         * @return threads
+         */
+        size_t threads() {
+            return m_threads.size();
         }
 
     private:
@@ -215,10 +244,28 @@ namespace ohm {
         std::atomic<bool> m_running;
         Action m_intime_action;
 
+        std::atomic<int64_t> m_limit;
+
         std::function<void()> m_in_action;
         std::function<void()> m_out_action;
 
-        std::atomic<int64_t> m_limit;
+        std::function<void(time::ms)> m_action_report;
+
+        struct Reporter {
+        public:
+            Reporter(const std::function<void(time::ms)> &reporter)
+                : m_reporter(reporter), m_start(now()) {
+            }
+
+            ~Reporter() {
+                auto end = now();
+                m_reporter(std::chrono::duration_cast<time::ms>(end - m_start));
+            }
+
+        private:
+            std::function<void(time::ms)> m_reporter;
+            time_point m_start;
+        };
 
         void operating(Action action) {
             while (true) {
@@ -237,7 +284,12 @@ namespace ohm {
                 m_cond_push.notify_one();
                 m_out_action();
                 _lock.unlock();
-                action(tmp);
+                if (m_action_report) {
+                    Reporter reporter(m_action_report);
+                    action(tmp);
+                } else {
+                    action(tmp);
+                }
             }
         }
     };

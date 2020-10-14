@@ -5,8 +5,10 @@
 #ifndef OMEGA_PIPE_H
 #define OMEGA_PIPE_H
 
-#include "ohm/thread/dispatcher_queue.h"
-#include "ohm/type_iterable.h"
+#include "../thread/dispatcher_queue.h"
+#include "../type_iterable.h"
+
+#include "pipe_profiler.h"
 
 namespace ohm {
     /**
@@ -71,8 +73,14 @@ namespace ohm {
         using self = Pipe;
         using Type = T;
 
+        Pipe(std::shared_ptr<PipeProfiler> profiler)
+                : m_queue(new DispatcherQueue<T>)
+                , m_join_links(new std::vector<std::function<void(void)>>)
+                , m_profiler(std::move(profiler)) {}
+
         Pipe()
-                : m_queue(new DispatcherQueue<T>), m_join_links(new std::vector<std::function<void(void)>>) {}
+            : self(std::make_shared<PipeProfiler>()) {
+        }
 
         ~Pipe() = default;
 
@@ -109,7 +117,7 @@ namespace ohm {
                  std::is_move_constructible<FUNC>::value)>::type>
         auto map11(size_t N, FUNC func) -> Pipe<typename is_pipe_mapper<FUNC, T>::mapped_type> {
             using mapped_type = typename is_pipe_mapper<FUNC, T>::mapped_type;
-            Pipe<mapped_type> mapped;
+            Pipe<mapped_type> mapped(m_profiler);
             auto processor = [this, mapped, func](T data) {
                 try {
                     const_cast<Pipe<mapped_type> &>(mapped).push(func(data));
@@ -142,7 +150,7 @@ namespace ohm {
         auto map1n(size_t N, FUNC func)
         -> Pipe<typename has_iterator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value_type> {
             using mapped_type = typename has_iterator<typename is_pipe_mapper<FUNC, T>::mapped_type>::value_type;
-            Pipe<mapped_type> mapped;
+            Pipe<mapped_type> mapped(m_profiler);
             auto processor = [this, mapped, func](T data) {
                 try {
                     auto range = func(data);
@@ -179,7 +187,7 @@ namespace ohm {
         auto map1x(size_t N, FUNC func)
         -> Pipe<typename is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::return_type> {
             using mapped_type = typename is_data_generator<typename is_pipe_mapper<FUNC, T>::mapped_type>::return_type;
-            Pipe<mapped_type> mapped;
+            Pipe<mapped_type> mapped(m_profiler);
             auto processor = [this, mapped, func](T data) {
                 try {
                     auto generator = func(data);
@@ -371,6 +379,37 @@ namespace ohm {
             }
         }
 
+        /**
+         * Do profile by given name
+         * @param name profile's queue name
+         * @return self
+         */
+        self &profile(const std::string &name) {
+            if (!m_profiler) m_profiler.reset(new PipeProfiler);
+            auto callback = m_profiler->callback(name);
+            m_queue->set_io_action(callback.in, callback.out);
+            m_queue->set_time_reporter(callback.time);
+            return *this;
+        }
+
+        /**
+         * Stop do profile
+         * @return self
+         */
+        self &profile(std::nullptr_t) {
+            m_queue->clear_io_action();
+            m_queue->clear_time_reporter();
+            return *this;
+        }
+
+        PipeProfiler::Report report() {
+            if (m_profiler) {
+                return m_profiler->report();
+            } else {
+                return PipeProfiler::Report();
+            }
+        }
+
         DispatcherQueue<T> &queue() { return *m_queue; }
 
         const DispatcherQueue<T> &queue() const { return *m_queue; }
@@ -378,6 +417,8 @@ namespace ohm {
     private:
         std::shared_ptr<DispatcherQueue<T>> m_queue;
         std::shared_ptr<std::vector<std::function<void(void)>>> m_join_links;
+
+        std::shared_ptr<PipeProfiler> m_profiler;
     };
 
     template<>
