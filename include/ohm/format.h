@@ -114,6 +114,20 @@ namespace ohm {
         _::scat(oss, args...);
         return oss.str();
     }
+
+    inline std::string to_lower(std::string str) {
+        for (auto &ch : str) {
+            ch = char(tolower(ch));
+        }
+        return std::move(str);
+    }
+
+    inline std::string to_upper(std::string str) {
+        for (auto &ch : str) {
+            ch = char(toupper(ch));
+        }
+        return std::move(str);
+    }
 }
 
 #endif //OMEGA_FORMAT_H

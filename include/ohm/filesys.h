@@ -259,6 +259,15 @@ namespace ohm {
         return name_ext.substr(0, sep_pos);
     }
 
+    inline std::string cut_name_ext(const std::string &name_ext) {
+        auto dot_pos = name_ext.rfind('.');
+        auto sep_pos = dot_pos;
+        if (sep_pos == std::string::npos) {
+            return name_ext;
+        }
+        return name_ext.substr(0, sep_pos);
+    }
+
     inline bool isdir(const std::string &path) {
         struct stat buf;
         if (stat(path.c_str(), &buf)) return false;

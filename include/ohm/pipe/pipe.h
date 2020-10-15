@@ -587,7 +587,7 @@ namespace ohm {
          * loop call `generate` `times` times until catch `PipeBreak`
          * @param times loop times
          */
-        template<typename I, typename=Required<std::is_integral<T>>>
+        template<typename I, typename=Required<std::is_integral<I>>>
         void loop(I times) {
             try {
                 for (I i = 0; i < times; ++i) {
