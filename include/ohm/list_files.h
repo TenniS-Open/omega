@@ -10,6 +10,7 @@
 #include <iostream>
 #include <queue>
 
+#include "need.h"
 #include "filesys.h"
 #include "platform.h"
 
@@ -67,6 +68,44 @@ namespace ohm {
             closedir(handle);
 #endif
             return std::move(result);
+        }
+
+
+        inline void for_each_file_or_folder(const std::string &path,
+                                            const std::function<void(std::string)> &for_file,
+                                            const std::function<void(std::string)> &for_folder) {
+            std::vector<std::string> result;
+#if OHM_PLATFORM_OS_WINDOWS
+            _finddata_t file;
+            std::string pattern = path + file::sep() + "*";
+            auto handle = _findfirst(pattern.c_str(), &file);
+            if (handle == -1L) return;
+            ohm_need(_findclose, handle);
+
+            do {
+                if (strcmp(file.name, ".") == 0 || strcmp(file.name, "..") == 0) continue;
+                if (file.attrib & _A_SUBDIR) {
+                    if (for_folder) for_folder(file.name);
+                } else {
+                    if (for_file) for_file(file.name);
+                }
+            } while (_findnext(handle, &file) == 0);
+#else
+            struct dirent *file;
+            auto handle = opendir(path.c_str());
+            if (handle == nullptr) return;
+            ohm_need(closedir, handle);
+
+            while ((file = readdir(handle)) != nullptr) {
+                if (strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0) continue;
+                if (file->d_type & DT_DIR) {
+                    if (for_folder) for_folder(file->d_name);
+                } else if (file->d_type & DT_REG) {
+                    if (for_file) for_file(file->d_name);
+                }
+                // DT_LNK // for linkfiles
+            }
+#endif
         }
     }
 
@@ -139,6 +178,68 @@ namespace ohm {
             for (auto &folder : folders) work.push({local_path + file::sep() + folder, local_depth + 1});
         }
         return result;
+    }
+
+    inline void for_each_file(const std::string &root,
+                       const std::function<void(std::string)> &for_file,
+                       int depth = -1) {
+        std::queue<std::pair<std::string, int>> work;
+        _::for_each_file_or_folder(
+                root,
+                [&](std::string file){
+                    for_file(file);
+                },
+                [&](std::string folder){
+                    work.push(std::make_pair(folder, 1));
+                });
+        while (!work.empty()) {
+            auto local_pair = work.front();
+            work.pop();
+            auto local_path = local_pair.first;
+            auto local_depth = local_pair.second;
+            if (depth > 0 && local_depth >= depth) continue;
+            _::for_each_file_or_folder(
+                    root + file::sep() + local_path,
+                    [&](std::string file) {
+                        for_file(local_path + file::sep() + file);
+                    },
+                    [&](std::string folder) {
+                        auto next_folder = local_path + file::sep() + folder;
+                        auto next_depth = local_depth + 1;
+                        if (depth > 0 && next_depth >= depth) return;
+                        work.push({next_folder, next_depth});
+                    });
+        }
+    }
+
+    inline void for_each_folder(const std::string &root,
+                         const std::function<void(std::string)> &for_folder,
+                         int depth = -1) {
+        std::queue<std::pair<std::string, int>> work;
+        _::for_each_file_or_folder(
+                root,
+                nullptr,
+                [&](std::string folder) {
+                    for_folder(folder);
+                    work.push(std::make_pair(folder, 1));
+                });
+        while (!work.empty()) {
+            auto local_pair = work.front();
+            work.pop();
+            auto local_path = local_pair.first;
+            auto local_depth = local_pair.second;
+            if (depth > 0 && local_depth >= depth) continue;
+            _::for_each_file_or_folder(
+                    root + file::sep() + local_path,
+                    nullptr,
+                    [&](std::string folder) {
+                        auto next_folder = local_path + file::sep() + folder;
+                        auto next_depth = local_depth + 1;
+                        for_folder(next_folder);
+                        if (depth > 0 && next_depth >= depth) return;
+                        work.push({next_folder, next_depth});
+                    });
+        }
     }
 }
 

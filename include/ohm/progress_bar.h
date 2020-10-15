@@ -75,14 +75,14 @@ namespace ohm {
             STOPPED,
         };
 
-        progress_bar(int min, int max, int value)
+        progress_bar(int64_t min, int64_t max, int64_t value)
                 : m_min(min), m_max(max), m_value(value), m_paused_duration(0) {
             m_last_show_time_point = now() - time::sec(3600);
         }
 
-        progress_bar(int min, int max) : progress_bar(min, max, min) {}
+        progress_bar(int64_t min, int64_t max) : progress_bar(min, max, min) {}
 
-        explicit progress_bar(int max) : progress_bar(0, max, 0) {}
+        explicit progress_bar(int64_t max) : progress_bar(0, max, 0) {}
 
         progress_bar() : progress_bar(0, 100, 0) {}
 
@@ -168,36 +168,36 @@ namespace ohm {
             return m_autostop;
         }
 
-        int value() const {
+        int64_t value() const {
             return m_value;
         }
 
-        int max() const {
+        int64_t max() const {
             return m_max;
         }
 
-        int min() const {
+        int64_t min() const {
             return m_min;
         }
 
-        void set_value(int value) {
+        void set_value(int64_t value) {
             m_value = value;
         }
 
-        void set_min(int min) {
+        void set_min(int64_t min) {
             m_min = min;
         }
 
-        void set_max(int max) {
+        void set_max(int64_t max) {
             m_max = max;
         }
 
-        int next() {
+        int64_t next() {
             start();
             return next(m_step);
         }
 
-        int next(int step) {
+        int64_t next(int64_t step) {
             start();
             m_value += step;
             if (m_value >= m_max && m_autostop) {
@@ -234,10 +234,10 @@ namespace ohm {
             if (m_vpus == 0) {
                 auto used_time = self::used_time();
                 if (used_time.count() == 0) return time::us(0);
-                auto proessed_count = m_value - m_min;
+                auto processed_count = m_value - m_min;
                 auto left_count = m_max - m_value;
-                if (proessed_count == 0) return time::us(0);
-                return used_time * left_count / proessed_count;
+                if (processed_count == 0) return time::us(0);
+                return used_time * left_count / processed_count;
             }
 
             auto left_count = m_max - m_value;
@@ -331,10 +331,10 @@ namespace ohm {
             }
         }
 
-        int m_min;
-        int m_max;
-        int m_value;
-        int m_step = 1;
+        int64_t m_min;
+        int64_t m_max;
+        int64_t m_value;
+        int64_t m_step = 1;
 
         bool m_autostop = true;
 
@@ -345,9 +345,9 @@ namespace ohm {
         time_point m_pause_time_point;
         time::us m_paused_duration;
 
-        mutable int m_show_count = 0;
+        mutable int64_t m_show_count = 0;
 
-        int m_sample_value = 0;
+        int64_t m_sample_value = 0;
         time_point m_sample_time_point;
         double m_vpus = 0; // values per microseconds
 
