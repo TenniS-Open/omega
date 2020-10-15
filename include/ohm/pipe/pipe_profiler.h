@@ -122,18 +122,19 @@ namespace ohm {
                 int64_t threads;     ///< number of threads to process
                 time::ms average_time;       ///< each processor average time
             };
-            std::vector<Line> lines;
+            std::map<std::string, Line> report;
         };
 
         Report report() {
             Report result;
             for (auto &pair : m_status) {
-                result.lines.emplace_back(
+                result.report.insert(std::make_pair(
+                        pair.first,
                         Report::Line({pair.first,
                                       pair.second.io_count.report(),
                                       pair.second.capacity ? pair.second.capacity() : 0,
                                       pair.second.threads ? pair.second.threads() : 0,
-                                      pair.second.process_time.time()}));
+                                      pair.second.process_time.time()})));
             }
             return result;
         }

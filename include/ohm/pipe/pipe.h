@@ -583,6 +583,21 @@ namespace ohm {
             }
         }
 
+        /**
+         * loop call `generate` `times` times until catch `PipeBreak`
+         * @param times loop times
+         */
+        template<typename I, typename=Required<std::is_integral<T>>>
+        void loop(I times) {
+            try {
+                for (I i = 0; i < times; ++i) {
+                    generate();
+                }
+            } catch (PipeBreak) {
+                return;
+            }
+        }
+
     private:
         Generator m_generator;
     };

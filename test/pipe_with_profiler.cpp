@@ -46,10 +46,12 @@ int main() {
             .profile("4: output")
             .seal(2, saver);
 
-    ohm::LoopThread log(20, [&]() {
+    ohm::LoopThread log(1, [&]() {
         auto report = input.report();
         ohm::println("==================================");
-        for (auto &line : report.lines) {
+        for (auto &pair : report.report) {
+            auto &name = pair.first;
+            auto &line = pair.second;
             ohm::println(line.name, ": time = ", line.threads, " * ", line.average_time);
         }
     });
