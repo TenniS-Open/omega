@@ -75,8 +75,13 @@ namespace ohm {
 
     class PipeStatus {
     public:
+        template<typename T>
+        using Getter = std::function<T()>;
+
         QueueWatcher io_count;
         PipeTimeWatcher process_time;
+        Getter<int64_t> capacity;
+        Getter<int64_t> threads;
     };
 
     class PipeProfiler {
@@ -87,26 +92,35 @@ namespace ohm {
             std::function<void(time::ms)> time;
         };
 
-        Callback callback(const std::string &name) {
+        template<typename T>
+        using Getter = std::function<T()>;
+
+        Callback callback(const std::string &name,
+                          const Getter<int64_t> &capacity = nullptr,
+                          const Getter<int64_t> &threads = nullptr) {
             auto it = m_status.find(name);
             if (it == m_status.end()) {
                 auto succeed = m_status.insert(std::make_pair(name, PipeStatus()));
                 it = succeed.first;
             }
             auto &status = it->second;
+            status.capacity = capacity;
+            status.threads = threads;
             return {status.io_count.input_ticker(),
                     status.io_count.output_ticker(),
                     status.process_time.time_reporter()};
         }
 
         /**
-         * log for each
+         * log for each queue
          */
         struct Report {
             struct Line {
-                std::string name;
-                QueueWatcher::Report queue;
-                time::ms each_process_time;
+                std::string name;   ///< profile name
+                QueueWatcher::Report queue; ///< queue status
+                int64_t capacity;    ///< size limit of queue
+                int64_t threads;     ///< number of threads to process
+                time::ms average_time;       ///< each processor average time
             };
             std::vector<Line> lines;
         };
@@ -117,6 +131,8 @@ namespace ohm {
                 result.lines.emplace_back(
                         Report::Line({pair.first,
                                       pair.second.io_count.report(),
+                                      pair.second.capacity ? pair.second.capacity() : 0,
+                                      pair.second.threads ? pair.second.threads() : 0,
                                       pair.second.process_time.time()}));
             }
             return result;

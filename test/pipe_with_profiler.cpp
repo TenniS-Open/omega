@@ -37,16 +37,20 @@ int main() {
     };
 
     input.limit(50)
-        .profile("x*6").map(2, mapper_inplace).limit(10)
-        .profile("{x/2,x/3}").map(3, mapper_converter1x).limit(10)
-        .profile("x/10").map(0, mapper_converter11)
-        .profile("output").seal(6, saver);
+            .profile("1: x*6")
+            .map(2, mapper_inplace).limit(10)
+            .profile("2: {x/2,x/3}")
+            .map(2, mapper_converter1x).limit(10)
+            .profile("3: x/10")
+            .map(0, mapper_converter11)
+            .profile("4: output")
+            .seal(2, saver);
 
     ohm::LoopThread log(20, [&]() {
         auto report = input.report();
         ohm::println("==================================");
         for (auto &line : report.lines) {
-            ohm::println(line.name, ": time = ", line.each_process_time);
+            ohm::println(line.name, ": time = ", line.threads, " * ", line.average_time);
         }
     });
 

@@ -386,7 +386,14 @@ namespace ohm {
          */
         self &profile(const std::string &name) {
             if (!m_profiler) m_profiler.reset(new PipeProfiler);
-            auto callback = m_profiler->callback(name);
+            auto callback = m_profiler->callback(
+                    name,
+                    [this]() -> int64_t {
+                        return m_queue->capacity();
+                    },
+                    [this]() -> int64_t {
+                        return int64_t(m_queue->threads());
+                    });
             m_queue->set_io_action(callback.in, callback.out);
             m_queue->set_time_reporter(callback.time);
             return *this;
@@ -402,6 +409,10 @@ namespace ohm {
             return *this;
         }
 
+        /**
+         * Got report of all queue
+         * @return
+         */
         PipeProfiler::Report report() {
             if (m_profiler) {
                 return m_profiler->report();
