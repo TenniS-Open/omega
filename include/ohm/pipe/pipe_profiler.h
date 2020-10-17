@@ -102,6 +102,7 @@ namespace ohm {
             if (it == m_status.end()) {
                 auto succeed = m_status.insert(std::make_pair(name, PipeStatus()));
                 it = succeed.first;
+                m_lines.emplace_back(name);
             }
             auto &status = it->second;
             status.capacity = capacity;
@@ -122,6 +123,7 @@ namespace ohm {
                 int64_t threads;     ///< number of threads to process
                 time::ms average_time;       ///< each processor average time
             };
+            std::vector<std::string> lines;
             std::map<std::string, Line> report;
         };
 
@@ -136,11 +138,13 @@ namespace ohm {
                                       pair.second.threads ? pair.second.threads() : 0,
                                       pair.second.process_time.time()})));
             }
+            result.lines = m_lines;
             return result;
         }
 
     private:
         std::map<std::string, PipeStatus> m_status;
+        std::vector<std::string> m_lines;
     };
 }
 
