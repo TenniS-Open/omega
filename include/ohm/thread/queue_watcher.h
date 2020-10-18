@@ -24,7 +24,7 @@ namespace ohm {
             } in, out;
         };
 
-        explicit InOutCounter(size_t windows_size = 10)
+        explicit InOutCounter(size_t windows_size = 60)
                 : m_beginning(now()), m_window_size(windows_size < 2 ? 2 : windows_size), m_count(0) {}
 
         InOutCounter(const InOutCounter &) = delete;
@@ -86,8 +86,8 @@ namespace ohm {
     private:
         void tick(Pot &pot, time_point now_time) {
             pot.last_time_point = time::count<time::ms>(now_time - m_beginning);
+            pot.every_time_point.push_back(now_time);
             if (pot.every_time_point.size() < 2) {
-                pot.every_time_point.push_back(now_time);
                 return;
             }
             pot.each_spent_time =
