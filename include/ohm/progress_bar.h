@@ -244,6 +244,14 @@ namespace ohm {
             return time::us(int64_t(left_count / m_vpus));
         }
 
+        /**
+         * Data per seconds
+         * @return
+         */
+        float dps() const {
+            return float(m_vpus * 1000000);
+        }
+
         int percent() const {
             auto fpercent = float(m_value - m_min) / (m_max - m_min) * 100;
             auto ipercent = static_cast<int>(fpercent);
