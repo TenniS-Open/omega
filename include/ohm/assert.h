@@ -43,7 +43,7 @@ namespace ohm {
             ". ", ## __VA_ARGS__); \
         } else { \
             ohm_log(ohm::LOG_ERROR, "Assertion failed: ", "(" #cont, ")", \
-            ". ", log, ## __VA_ARGS__); \
+            ". ", ## __VA_ARGS__); \
         } \
     } while (false)
 

@@ -275,7 +275,7 @@ namespace ohm {
         operator=(T &&t) {
             using Element = typename notation::type_type<typename std::decay<T>::type>::type;
             // TODO: check if there is need to update new
-            m_var = std::make_shared<Element>(std::forward<T>(t));
+            m_var = std::shared_ptr<Element>(new Element(std::forward<T>(t)));
             if (m_notifier) {
                 m_notifier(m_var);
             }
