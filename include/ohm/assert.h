@@ -21,15 +21,15 @@ namespace ohm {
     };
 
     template <typename T>
-    auto __forward_assert_logger(T &&t) -> decltype(std::forward<T>(t)) {
+    inline auto __forward_assert_logger(T &&t) -> decltype(std::forward<T>(t)) {
         return std::forward<T>(t);
     }
 
-    auto __forward_assert_logger(const Logger &logger) -> LogStream {
+    inline auto __forward_assert_logger(const Logger &logger) -> LogStream {
         return logger(LOG_ERROR);
     }
 
-    auto __forward_assert_logger(Logger &logger) -> LogStream {
+    inline auto __forward_assert_logger(Logger &logger) -> LogStream {
         return logger(LOG_ERROR);
     }
 }
@@ -43,7 +43,7 @@ namespace ohm {
             ". ", ## __VA_ARGS__); \
         } else { \
             ohm_log(ohm::LOG_ERROR, "Assertion failed: ", "(" #cont, ")", \
-            ". ", log, ## __VA_ARGS__); \
+            ". ", ## __VA_ARGS__); \
         } \
     } while (false)
 
