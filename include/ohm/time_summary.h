@@ -81,9 +81,9 @@ namespace ohm {
 
         void done(const std::string &tag) {}
 
-        std::string summary() const {}
+        std::string summary() const { return ""; }
 
-        std::ostream &summary(std::ostream &out) const {}
+        std::ostream &summary(std::ostream &out) const { return out; }
     };
 
     using DoTimeSummary = IfTimeSummary<true>;
