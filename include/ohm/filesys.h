@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <regex>
 
 #pragma push_macro("ACCESS")
 #pragma push_macro("MKDIR")
@@ -304,6 +305,17 @@ namespace ohm {
     private:
         std::string precwd;
     };
+
+    static bool is_absolute(const std::string &path) {
+        std::regex abs(R"((^[\\/].*$)|(^[A-Za-z]+:[\\/].*$))");
+        return std::regex_match(path, abs);
+    }
+
+    static std::string get_absolute(const std::string &root, const std::string &path) {
+        if (root.empty() || is_absolute(path)) return path;
+        if (root.back() == '\\' || root.back() == '/') return root + path;
+        return join_path({root, path});
+    }
 }
 
 #define ohm_cd(path) ohm::stack_cd ohm_auto_name(__stack_cd_)(path)
