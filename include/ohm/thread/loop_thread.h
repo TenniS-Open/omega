@@ -6,6 +6,7 @@
 #define OMEGA_LOOP_THREAD_H
 
 #include "../void_bind.h"
+#include "../time.h"
 
 #include <thread>
 #include <atomic>
@@ -18,7 +19,6 @@ namespace ohm {
     class LoopThread {
     public:
         using self = LoopThread;
-
         enum Status {
             RUNNING,
             SUSPEND,
@@ -29,6 +29,13 @@ namespace ohm {
             int fps;
 
             FPS(int fps) : fps(fps) {}
+        };
+
+        class Return : public std::exception {
+        public:
+            Status status;
+            Return(Status status)
+                : status(status) {}
         };
 
         template<typename... Args>
@@ -160,8 +167,14 @@ namespace ohm {
                         break;
                     }
                     case RUNNING: {
-                        m_action();
-                        delay();
+                        try {
+                            m_action();
+                            delay();
+                        } catch (const Return &ret) {
+                            m_status = ret.status;
+                        } catch (const std::exception &) {
+                            // ...
+                        }
                         break;
                     }
                     case SUSPEND: {
