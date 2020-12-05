@@ -15,7 +15,7 @@ namespace ohm {
         using self = MT19937;
 
         MT19937() {
-            this->srand((int) time(nullptr));
+            this->srand((int) ::time(nullptr));
         }
 
         explicit MT19937(int __seed) {
@@ -57,7 +57,7 @@ namespace ohm {
     };
 
 #pragma push_macro("ln")
-#define ln log
+#define ln ::log
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif // M_PI
