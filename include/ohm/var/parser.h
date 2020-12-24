@@ -374,6 +374,11 @@ namespace ohm {
             return parse_value(ctx, it);
         }
 
+        inline Var read_json(Context &ctx, const char *buff, size_t size) {
+            json_iterator it(buff, size);
+            return parse_value(ctx, it);
+        }
+
         inline size_t write_json(const Var &var, const VarWriter &writer) {
             auto body = var.repr();
             return writer(body.data(), body.size());
@@ -384,6 +389,18 @@ namespace ohm {
             ctx.push("<>");
             auto c_str = str.c_str();
             return read_json(ctx, VarMemoryReader(c_str, str.length() + 1));
+        }
+
+        inline Var from_string(const char *buff, size_t size) {
+            Context ctx;
+            ctx.push("<>");
+            return read_json(ctx, buff, size);
+        }
+
+        inline Var from_string(const char *c_str) {
+            Context ctx;
+            ctx.push("<>");
+            return read_json(ctx,c_str, strlen(c_str) + 1);
         }
 
         inline std::string to_string(const Var &var) {
