@@ -40,6 +40,12 @@ elseif (UNIX)
 else ()
 endif ()
 
+find_package(OpenCV REQUIRED)
+if (OpenCV_FOUND)
+    include_directories(${OpenCV_INCLUDE_DIRS})
+    link_libraries(${OpenCV_LIBS})
+endif()
+
 # build test codes
 foreach (path ${TEST_FILES})
     string(REGEX MATCH "[^/]*.[(c)|(cc)|(cpp)]$" file_ext ${path})
