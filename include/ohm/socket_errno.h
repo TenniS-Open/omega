@@ -175,7 +175,7 @@ namespace ohm {
                 case EINTR: return SocketError::INTR;
                 case ESHUTDOWN: return SocketError::SHUTDOWN;
                 case EMSGSIZE: return SocketError::MSGSIZE;
-                case EAGAIN: return SocketError::AGAIN;
+                // case EAGAIN: return SocketError::AGAIN;
                     // fault error
                 case EFAULT: return SocketError::FAULT;
                 case EMFILE: return SocketError::MFILE;

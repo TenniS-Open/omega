@@ -10,6 +10,8 @@
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <cstdlib>
+#include <cstring>
 
 namespace ohm {
     inline std::string mstring(uint64_t memory_size) {
