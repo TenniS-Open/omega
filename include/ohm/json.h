@@ -29,6 +29,14 @@ namespace ohm {
             return parser::from_string(str);
         }
 
+        inline Var from_string(const char *str) {
+            return parser::from_string(str);
+        }
+
+        inline Var from_string(const char *buff, size_t size) {
+            return parser::from_string(buff, size);
+        }
+
         inline std::string to_string(const Var &var) {
             return parser::to_string(var);
         }
