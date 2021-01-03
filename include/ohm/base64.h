@@ -57,13 +57,13 @@ namespace ohm {
         return base64_encode(dolly);
     }
 
-    static Binary base64_decode(const Binary &buff) {
+    static Binary base64_decode(const char *buff, size_t buff_size) {
         Binary bin;
         int equal_sign_count = 0;
         int bin_code = 0;
         int bin_code_count = 0;
-        bin.reverse(buff.size() / 4 * 3);
-        for (size_t i = 0; i < buff.size(); ++i)
+        bin.reverse(buff_size / 4 * 3);
+        for (size_t i = 0; i < buff_size; ++i)
         {
             char ch = buff[i];
             if (ch & 0x80) ohm_log(ohm::LOG_ERROR, "unrecognized code: ", ch);
@@ -89,9 +89,8 @@ namespace ohm {
         return std::move(bin);
     }
 
-    inline Binary base64_decode(const char *bin, size_t size) {
-        Binary buff(bin, size);
-        return base64_decode(buff);
+    inline Binary base64_decode(const Binary &buff) {
+        return base64_decode(buff.data<char>(), buff.size());
     }
 }
 

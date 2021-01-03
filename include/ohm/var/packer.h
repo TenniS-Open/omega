@@ -10,6 +10,8 @@
 #include "context.h"
 #include "stream.h"
 #include "../print.h"
+#include "../filesys.h"
+
 #include <fstream>
 
 namespace ohm {
@@ -53,7 +55,8 @@ namespace ohm {
             if (args.size() < 2) {
                 throw VarIOExcpetion(ctx, "Command format error, should be @file@...");
             }
-            auto data = read_file(args[1]);
+            auto path = get_absolute(ctx.sysroot(), args[1]);
+            auto data = read_file(path);
             if (data.empty()) {
 
                 throw VarIOExcpetion(ctx, sprint(args[1], " is not a valid file."));
