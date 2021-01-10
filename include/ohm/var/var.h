@@ -636,7 +636,7 @@ namespace ohm {
                 ID_CASE(notation::type::Boolean)
                     _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::String)
-                    _UNSAFE_RETURN(&content, notation::element_size(content))
+                    _UNSAFE_RETURN((void*)(content.data()), content.size())
                 ID_CASE(notation::type::Array)
                     _UNSAFE_RETURN(&content, notation::element_size(content))
                 ID_CASE(notation::type::Object)
