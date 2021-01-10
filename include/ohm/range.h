@@ -186,13 +186,13 @@ namespace ohm {
         return Range<T>(T(begin), T(end));
     }
 
-    template<typename _Begin>
+    template<typename _End>
     typename std::enable_if<
-            is_rangeable<_Begin>::value,
-            Range<_Begin>>::type
-    inline range(_Begin begin) {
-        using T = _Begin;
-        return Range<T>(begin);
+            is_rangeable<_End>::value,
+            Range<_End>>::type
+    inline range(_End end) {
+        using T = _End;
+        return Range<T>(end);
     }
 }
 

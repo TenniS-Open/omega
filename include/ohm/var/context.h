@@ -59,6 +59,12 @@ namespace ohm {
                 return this->str();
             }
 
+            const std::string &sysroot() const { return m_sysroot; }
+
+            void sysroot(std::string sysroot) {
+                m_sysroot = std::move(sysroot);
+            }
+
         private:
             void push_seg(const std::string &seg) {
                 auto base = m_stack.empty() ? 0 : m_stack.top();
@@ -76,6 +82,7 @@ namespace ohm {
             std::vector<char> m_data;
             std::stack<size_t> m_stack;
             size_t m_size;
+            std::string m_sysroot;
         };
     }
 }

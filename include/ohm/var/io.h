@@ -20,9 +20,10 @@ namespace ohm {
          * @notice it throws VarIOException if file format has not recognized.
          */
         inline Var readf(const VarReader &reader, const std::string &sysroot = "") {
-            ohm_cd(sysroot);
+            // ohm_cd(sysroot);
 
             vario::Context ctx;
+            ctx.sysroot(sysroot);
             ctx.push("<>");
             VarForwardReader _forward(reader, 8);
             auto forward = [&_forward](void *data, size_t size) -> size_t {
