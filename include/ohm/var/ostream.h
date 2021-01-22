@@ -130,7 +130,7 @@ namespace ohm {
          * @param write_magic if write magic number
          * @return number of writen bytes
          */
-        size_t write(const Var &var, const VarWriter &writer, bool write_magic = false) {
+        inline size_t write(const Var &var, const VarWriter &writer, bool write_magic = false) {
             size_t writen = 0;
             if (write_magic) {
                 uint32_t fake = 0;
