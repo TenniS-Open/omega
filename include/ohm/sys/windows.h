@@ -41,6 +41,8 @@ namespace ohm {
 #undef VOID
 #undef min
 #undef max
+#undef TRUE
+#undef FALSE
 
 #endif
 
