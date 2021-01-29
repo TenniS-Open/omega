@@ -43,6 +43,14 @@ namespace ohm {
 #undef max
 #undef TRUE
 #undef FALSE
+#undef BOOL
+
+using VOID = void;
+using BOOL = int32_t;
+namespace {
+    BOOL TRUE = 1;
+    BOOL FALSE = 0;
+}
 
 #endif
 
