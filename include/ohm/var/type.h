@@ -88,11 +88,6 @@ namespace ohm {
 
                 operator bool() const { return data != 0; }
             };
-
-            namespace {
-                Boolean TRUE = true;
-                Boolean FALSE = false;
-            }
         }
 
         struct float16 : public placeholder<16> {

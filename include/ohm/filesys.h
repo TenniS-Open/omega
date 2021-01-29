@@ -98,7 +98,7 @@ namespace ohm {
 
     inline bool copy(const std::string &fromfile, const std::string &tofile, bool force) {
 #if OHM_PLATFORM_OS_WINDOWS
-        return CopyFileA(fromfile.c_str(), tofile.c_str(), !force) != FALSE;
+        return bool(CopyFileA(fromfile.c_str(), tofile.c_str(), !force));
 #elif OHM_PLATFORM_OS_LINUX
         return std::system(sprint(force ? "cp -f " : "cp ", fromfile, ' ', tofile).c_str()) == 0;
 #else
