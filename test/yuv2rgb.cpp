@@ -148,7 +148,7 @@ int main(int argc, const char *argv[]) {
 
     std::cout << "Using " << threads << " thread(s)." << std::endl;
     std::cout << "Image size " << rgb_width << " x " << rgb_height << std::endl;
-    std::cout << "Image left rotate " << argv[6] << std::endl;
+    std::cout << "Image left rotate " << (argc > 6 ? argv[6] : "0") << std::endl;
 
     ohm::Shotgun gun(threads);
 
