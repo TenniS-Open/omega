@@ -39,6 +39,7 @@ int main() {
     };
 
     auto d1 = input.limit(2)
+            .parallel([](float a) { ohm::println("input: ", a); })
             .map(3, mapper_inplace).limit(10)
             .map(5, mapper_converter1x).limit(10)
                     // use if use 0 data processor, the converter will called by parent thread.

@@ -382,6 +382,10 @@ namespace ohm {
         class Diverter {
         public:
             template<typename I, typename = typename std::is_integral<I>::type>
+            Diverter(I size, std::shared_ptr<PipeProfiler> profiler)
+                : m_pipes(size_t(size), profiler) {
+            }
+            template<typename I, typename = typename std::is_integral<I>::type>
             Diverter(I size)
                 : m_pipes(size_t(size)) {
             }
@@ -434,7 +438,7 @@ namespace ohm {
                 (std::is_copy_constructible<FUNC>::value ||
                 std::is_move_constructible<FUNC>::value)>::type>
         auto dispatch(size_t N, size_t case_number, FUNC func) -> Diverter {
-            Diverter diverter(case_number);
+            Diverter diverter(case_number, m_profiler);
             auto processor = [this, case_number, diverter, func](T data) {
                 try {
                     auto number = int(func(data));
@@ -469,6 +473,53 @@ namespace ohm {
                 std::is_move_constructible<FUNC>::value)>::type>
         auto dispatch(size_t case_number, FUNC func) -> Diverter {
             return this->template dispatch(0, case_number, func);
+        }
+
+        /**
+         * @param N number of thread using
+         * @param func function
+         * @return origin type pipe, called child pipe.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_mapper<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                std::is_move_constructible<FUNC>::value)>::type>
+        auto parallel(size_t N, FUNC func) -> Pipe<T> {
+            Pipe<T> parallel_mapped(m_profiler);
+            Pipe<T> mapped(m_profiler);
+
+            parallel_mapped.template seal(N, func);
+
+            auto processor = [this, parallel_mapped, mapped, func](T data) {
+                try {
+                    const_cast<Pipe<T> &>(parallel_mapped).push(data);
+                } catch (PipeLeak) {}
+                try {
+                    const_cast<Pipe<T> &>(mapped).push(data);
+                } catch (PipeLeak) {}
+            };
+            m_queue->bind(processor, true);
+            m_join_links->emplace_back([parallel_mapped]() { const_cast<Pipe<T> &>(parallel_mapped).join(); });
+            m_join_links->emplace_back([mapped]() { const_cast<Pipe<T> &>(mapped).join(); });
+            return mapped;
+        }
+
+        /**
+         * @param func function
+         * @return origin type pipe, called child pipe.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_mapper<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                std::is_move_constructible<FUNC>::value)>::type>
+        auto parallel(FUNC func) -> Pipe<T> {
+            return this->template parallel(0, func);
         }
 
         /**
