@@ -15,6 +15,13 @@
 namespace ohm {
     class QueueEnd : public std::exception {};
 
+    enum DispatcherMode {
+        DISPATCH_KEEP_WAIT,  // using limit, if queue full, then wait queue had space.
+        DISPATCH_KEEP_NEW,   // using limit, if queue full, then pop oldest value.
+        DISPATCH_KEEP_OLD,   // using limit, if queue full, then discard the new value.
+        DISPATCH_FLUSH,      // discard all push action
+    };
+
     template<typename T, typename=typename std::enable_if<
             std::is_copy_assignable<T>::value &&
             std::is_copy_constructible<T>::value>::type>
@@ -40,12 +47,14 @@ namespace ohm {
             Action action;
         };
 
+
         /**
          * Construct queue, set `limit` of queue max size.
          * @param limit
          */
         explicit DispatcherQueue(int64_t limit = -1)
                 : m_running(true), m_limit(limit)
+                , m_mode(DISPATCH_KEEP_WAIT)
                 , m_in_action([](){}), m_out_action([](){}) {
         }
 
@@ -99,6 +108,10 @@ namespace ohm {
          * @param data push data
          */
         void push(T data) {
+            auto mode = m_mode.load();
+            if (mode == DISPATCH_FLUSH) {
+                return;
+            }
             if (m_intime_action) {
                 m_intime_action(std::move(data));
                 return;
@@ -106,13 +119,22 @@ namespace ohm {
             std::unique_lock<std::mutex> _lock(m_mutex);
             while (true) {
                 auto limit = m_limit.load();
-                if (limit > 0 && int64_t(m_deque.size()) >= limit) {
-                    m_cond_push.wait(_lock);
-                } else {
+                if (limit <= 0 || int64_t(m_deque.size()) < limit) {
                     break;
                 }
+                if (mode == DISPATCH_KEEP_WAIT) {
+                    m_cond_push.wait(_lock);
+                    mode = m_mode.load();
+                } else if (mode == DISPATCH_KEEP_NEW) {
+                    while (int64_t(m_deque.size()) >= limit) {
+                        m_deque.pop_front();
+                    }
+                    break;
+                } else if (mode == DISPATCH_KEEP_OLD) {
+                    return;
+                }
             }
-            m_deque.push_front(std::move(data));
+            m_deque.push_back(std::move(data));
             m_cond_pop.notify_one();
             m_in_action();
         }
@@ -166,8 +188,8 @@ namespace ohm {
                 }
             }
             if (!m_running) throw QueueEnd();
-            auto tmp = m_deque.back();
-            m_deque.pop_back();
+            auto tmp = m_deque.front();
+            m_deque.pop_front();
             m_cond_push.notify_one();
             m_out_action();
             return tmp;
@@ -235,6 +257,22 @@ namespace ohm {
             return m_threads.size();
         }
 
+        void keep_wait() {
+            m_mode = DISPATCH_KEEP_WAIT;
+        }
+
+        void keep_new() {
+            m_mode = DISPATCH_KEEP_NEW;
+        }
+
+        void keep_old() {
+            m_mode = DISPATCH_KEEP_OLD;
+        }
+
+        void flush() {
+            m_mode = DISPATCH_FLUSH;
+        }
+
     private:
         std::deque<T> m_deque;
         mutable std::mutex m_mutex;
@@ -245,6 +283,7 @@ namespace ohm {
         Action m_intime_action;
 
         std::atomic<int64_t> m_limit;
+        std::atomic<int32_t> m_mode;
 
         std::function<void()> m_in_action;
         std::function<void()> m_out_action;
@@ -279,8 +318,8 @@ namespace ohm {
                     }
                 }
                 if (!m_running) break;
-                auto tmp = m_deque.back();
-                m_deque.pop_back();
+                auto tmp = m_deque.front();
+                m_deque.pop_front();
                 m_cond_push.notify_one();
                 m_out_action();
                 _lock.unlock();

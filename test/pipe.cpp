@@ -8,7 +8,7 @@
 #include "ohm/type_name.h"
 
 int main() {
-    ohm::Tap<int> input(ohm::range(0, 10));
+    ohm::Tap<int> input(ohm::range(0, 100));
 
     // There are 3 types of converter.
     // 1. inplace data process
@@ -38,12 +38,14 @@ int main() {
         ohm::println("seal: ", a);
     };
 
-    input.limit(50)
+    auto d1 = input.limit(2)
             .map(3, mapper_inplace).limit(10)
             .map(5, mapper_converter1x).limit(10)
                     // use if use 0 data processor, the converter will called by parent thread.
             .map(0, mapper_converter11)
-            .seal(20, saver);
+            .dispatch(0, 2, [](float a) { return a > 20 ? 1 : 0;}); // use dispatch filter value.
+    d1.at(1).seal(20, saver);
+    d1.at(0).flush();   // remember flush, ignore this pipe data.
 
     input.loop();
     input.join();

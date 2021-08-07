@@ -46,6 +46,28 @@ namespace ohm {
         using mapped_type = typename traits<decltype(std::declval<FUNC>()(std::declval<ARG>()))>::type;
     };
 
+    template<typename FUNC, typename ARG, typename=void>
+            struct is_pipe_diverter {
+            public:
+                static constexpr bool value = false;
+            };
+
+    template<typename FUNC, typename ARG>
+    struct is_pipe_diverter<FUNC, ARG, typename std::enable_if<
+            std::is_same<
+            decltype(std::declval<int>()),
+            decltype(std::declval<FUNC>()(std::declval<ARG>()), std::declval<int>())>::value
+            >::type> {
+            public:
+                template<typename T>
+                struct traits {
+                    using type = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+                };
+
+                static constexpr bool value = std::is_convertible<
+                        typename traits<decltype(std::declval<FUNC>()(std::declval<ARG>()))>::type, int>::value;
+            };
+
     template<typename FUNC, typename=void>
     struct is_data_generator {
     public:
@@ -343,6 +365,8 @@ namespace ohm {
             }
         }
 
+
+
         /**
          *
          * @param func seal function
@@ -353,6 +377,98 @@ namespace ohm {
                  std::is_move_constructible<FUNC>::value)>::type>
         void seal(FUNC func) {
             seal(0, func);
+        }
+
+        class Diverter {
+        public:
+            template<typename I, typename = typename std::is_integral<I>::type>
+            Diverter(I size)
+                : m_pipes(size_t(size)) {
+            }
+
+            template<typename I, typename = typename std::is_integral<I>::type>
+            Pipe<T> &at(I i) {
+                return m_pipes[i];
+            }
+
+            template<typename I, typename = typename std::is_integral<I>::type>
+            Pipe<T> &operator[](I i) {
+                return m_pipes[i];
+            }
+
+            size_t size() const {
+                return m_pipes.size();
+            }
+
+            void join() {
+                for (auto &pipe : m_pipes) {
+                    pipe.join();
+                }
+            }
+        private:
+            Diverter(std::vector<Pipe<T>> pipes)
+                : m_pipes(std::move(pipes)) {
+            }
+
+            Diverter(std::vector<Pipe<T>> &&pipes)
+            : m_pipes(std::move(pipes)) {
+            }
+
+            std::vector<Pipe<T>> m_pipes;
+        };
+
+
+        /**
+         *
+         * @tparam FUNC dispatch function type
+         * @param N number of thread using
+         * @param case_number dispatch case number
+         * @param func dispatch function, return case number, means the data will send to witch case.
+         * @return diverter, contains number of case pipes.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_diverter<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                std::is_move_constructible<FUNC>::value)>::type>
+        auto dispatch(size_t N, size_t case_number, FUNC func) -> Diverter {
+            Diverter diverter(case_number);
+            auto processor = [this, case_number, diverter, func](T data) {
+                try {
+                    auto number = int(func(data));
+                    auto &cases = const_cast<Diverter &>(diverter);
+                    if (number < 0 || number >= int(case_number)) return;
+                    const_cast<Diverter &>(diverter)[number].push(data);
+                } catch (PipeLeak) {}
+            };
+            if (N == 0) {
+                m_queue->bind(processor, true);
+            } else {
+                for (decltype(N) i = 0; i < N; ++i) m_queue->bind(processor);
+            }
+            m_join_links->emplace_back([diverter]() { const_cast<Diverter &>(diverter).join(); });
+            return diverter;
+        }
+
+
+        /**
+         *
+         * @tparam FUNC dispatch function type
+         * @param case_number dispatch case number
+         * @param func dispatch function, return case number, means the data will send to witch case.
+         * @return diverter, contains number of case pipes.
+         * Notice the child pipe has already relied on this parent pipe.
+         * `SO` do not capture parent or parent's parent in map API of child pipe.
+         * It may cause circular reference.
+         */
+        template<typename FUNC, typename=typename std::enable_if<
+                is_pipe_diverter<FUNC, T>::value &&
+                (std::is_copy_constructible<FUNC>::value ||
+                std::is_move_constructible<FUNC>::value)>::type>
+        auto dispatch(size_t case_number, FUNC func) -> Diverter {
+            return this->template dispatch(0, case_number, func);
         }
 
         /**
@@ -425,6 +541,26 @@ namespace ohm {
         DispatcherQueue<T> &queue() { return *m_queue; }
 
         const DispatcherQueue<T> &queue() const { return *m_queue; }
+
+        self &keep_wait() {
+            m_queue->keep_wait();
+            return *this;
+        }
+
+        self &keep_new() {
+            m_queue->keep_new();
+            return *this;
+        }
+
+        self &keep_old() {
+            m_queue->keep_old();
+            return *this;
+        }
+
+        self &flush() {
+            m_queue->flush();
+            return *this;
+        }
 
     private:
         std::shared_ptr<DispatcherQueue<T>> m_queue;
