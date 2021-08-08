@@ -495,10 +495,10 @@ namespace ohm {
 
             auto processor = [this, parallel_mapped, mapped, func](T data) {
                 try {
-                    const_cast<Pipe<T> &>(parallel_mapped).push(data);
+                    const_cast<Pipe<T> &>(mapped).push(data);
                 } catch (PipeLeak) {}
                 try {
-                    const_cast<Pipe<T> &>(mapped).push(data);
+                    const_cast<Pipe<T> &>(parallel_mapped).push(data);
                 } catch (PipeLeak) {}
             };
             m_queue->bind(processor, true);
