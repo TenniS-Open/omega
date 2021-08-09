@@ -613,6 +613,12 @@ namespace ohm {
             return *this;
         }
 
+        void dispose() {
+            m_queue.template reset(new DispatcherQueue<T>);
+            m_join_links.template reset(new std::vector<std::function<void(void)>>);
+            m_profiler.reset();
+        }
+
     private:
         std::shared_ptr<DispatcherQueue<T>> m_queue;
         std::shared_ptr<std::vector<std::function<void(void)>>> m_join_links;
