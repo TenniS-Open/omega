@@ -143,7 +143,7 @@ namespace ohm {
             auto processor = [this, mapped, func](T data) {
                 try {
                     const_cast<Pipe<mapped_type> &>(mapped).push(func(data));
-                } catch (PipeLeak) {}
+                } catch (const PipeLeak &) {}
             };
             if (N == 0) {
                 m_queue->bind(processor, true);
@@ -180,7 +180,7 @@ namespace ohm {
                     for (auto &out : range) {
                         pipe.push(out);
                     }
-                } catch (PipeLeak) {}
+                } catch (const PipeLeak &) {}
             };
             if (N == 0) {
                 m_queue->bind(processor, true);
@@ -218,8 +218,8 @@ namespace ohm {
                         while (true) {
                             pipe.push(generator());
                         }
-                    } catch (PipeBreak) {}
-                } catch (PipeLeak) {}
+                    } catch (const PipeBreak &) {}
+                } catch (const PipeLeak &) {}
             };
             if (N == 0) {
                 m_queue->bind(processor, true);
@@ -356,7 +356,7 @@ namespace ohm {
             auto processor = [this, func](T data) {
                 try {
                     func(data);
-                } catch (PipeLeak) {}
+                } catch (const PipeLeak &) {}
             };
             if (N == 0) {
                 m_queue->bind(processor, true);
@@ -445,7 +445,7 @@ namespace ohm {
                     auto &cases = const_cast<Diverter &>(diverter);
                     if (number < 0 || number >= int(case_number)) return;
                     const_cast<Diverter &>(diverter)[number].push(data);
-                } catch (PipeLeak) {}
+                } catch (const PipeLeak &) {}
             };
             if (N == 0) {
                 m_queue->bind(processor, true);
@@ -496,10 +496,10 @@ namespace ohm {
             auto processor = [this, parallel_mapped, mapped, func](T data) {
                 try {
                     const_cast<Pipe<T> &>(mapped).push(data);
-                } catch (PipeLeak) {}
+                } catch (const PipeLeak &) {}
                 try {
                     const_cast<Pipe<T> &>(parallel_mapped).push(data);
-                } catch (PipeLeak) {}
+                } catch (const PipeLeak &) {}
             };
             m_queue->bind(processor, true);
             m_join_links->emplace_back([parallel_mapped]() { const_cast<Pipe<T> &>(parallel_mapped).join(); });
@@ -772,7 +772,7 @@ namespace ohm {
                 while (true) {
                     generate();
                 }
-            } catch (PipeBreak) {
+            } catch (const PipeBreak &) {
                 return;
             }
         }
@@ -787,7 +787,7 @@ namespace ohm {
                 for (I i = 0; i < times; ++i) {
                     generate();
                 }
-            } catch (PipeBreak) {
+            } catch (const PipeBreak &) {
                 return;
             }
         }

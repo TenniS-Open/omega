@@ -220,7 +220,7 @@ namespace ohm {
 
         void no_mutex_reserve(size_t clip_size) {
             if (m_clip.size() >= clip_size) return;
-            auto modified = clip_size - m_clip.size();
+            // auto modified = clip_size - m_clip.size();
             for (auto i = m_clip.size(); i < clip_size; ++i) {
                 m_clip.push_back(new Cartridge);
                 m_chest.push_back(int(i));
