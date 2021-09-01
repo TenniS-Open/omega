@@ -47,10 +47,10 @@ namespace ohm {
     };
 
     template <typename T>
-    inline constexpr bool _do_var_assignable();
+    constexpr bool _do_var_assignable();
 
     template <typename T>
-    inline constexpr bool _do_var_convertible();
+    constexpr bool _do_var_convertible();
 
     template<typename T, typename K>
     T *__at(K &t) { return reinterpret_cast<T *>(&t); }
