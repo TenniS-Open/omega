@@ -24,6 +24,14 @@ namespace ohm {
         virtual void parse(const Var &obj) = 0;
 
         virtual Var dump() const = 0;
+
+        virtual std::string json() const {
+            return dump().repr();
+        };
+
+        void parse_string(const std::string &json);
+
+        void parse_string(const char *json);
     };
 
     namespace json {
@@ -51,8 +59,17 @@ namespace ohm {
 
         template<typename T, size_t N>
         using SizeArray = std::array<T, N>;
+    }
 
+    inline void JSONBase::parse_string(const std::string &json) {
+        return parse(json::from_string(json));
+    }
 
+    inline void JSONBase::parse_string(const char *json) {
+        return parse(json::from_string(json));
+    }
+
+    namespace json {
         namespace _ {
 
             template<typename T, typename Enable = void>
@@ -160,10 +177,65 @@ namespace ohm {
             };
 
             template<typename T>
-            class _dumper<T, typename std::enable_if<is_Var_scalar<T>::value>::type> {
+            class _dumper<T, typename std::enable_if<
+                    std::is_integral<T>::value && !std::is_same<T, bool>::value
+                    || std::is_floating_point<T>::value
+                    >::type> {
             public:
                 static Var dump(const T &val) {
                     return Var(val);
+                }
+
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << val;
+                }
+            };
+
+            template<typename T>
+            class _dumper<T, typename std::enable_if<std::is_same<T, bool>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    return Var(val);
+                }
+
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << val ? "true" : "false";
+                }
+            };
+
+            template<typename T>
+            class _dumper<T, typename std::enable_if<std::is_same<T, std::string>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    return Var(val);
+                }
+
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << "\"" << notation::encode(val) << "\"";
+                }
+            };
+
+            template<typename T>
+            class _dumper<T, typename std::enable_if<std::is_same<T, Binary>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    return Var(val);
+                }
+
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << Var(val).str();
+                }
+            };
+
+            template<typename T>
+            class _dumper<T, typename std::enable_if<std::is_same<T, Var>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    return Var(val);
+                }
+
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << val.repr();
                 }
             };
 
@@ -205,6 +277,12 @@ namespace ohm {
                     return _dumper<T>::dump(*m_value);
                 }
 
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<T>::json(*m_value, oss);
+                    return oss.str();
+                }
+
             private:
                 std::string m_name;
                 T *m_value;
@@ -239,6 +317,12 @@ namespace ohm {
                     return _dumper<T>::dump(*m_value);
                 }
 
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<T>::json(*m_value, oss);
+                    return oss.str();
+                }
+
             private:
                 std::string m_name;
                 T *m_value;
@@ -263,6 +347,12 @@ namespace ohm {
                     return _dumper<T>::dump(*m_value);
                 }
 
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<T>::json(*m_value, oss);
+                    return oss.str();
+                }
+
             private:
                 T *m_value;
             };
@@ -272,6 +362,10 @@ namespace ohm {
             public:
                 static Var dump(const T &val) {
                     return val.dump();
+                }
+
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << val.json();
                 }
             };
 
@@ -291,6 +385,12 @@ namespace ohm {
 
                 Var dump() const override {
                     return _dumper<T>::dump(*m_value);
+                }
+
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<T>::json(*m_value, oss);
+                    return oss.str();
                 }
 
             private:
@@ -346,6 +446,15 @@ namespace ohm {
                     }
                     return obj;
                 }
+
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << "[";
+                    for (size_t i = 0; i < val.size(); ++i) {
+                        if (i) oss << ", ";
+                        _dumper<typename std::decay<decltype(val[i])>::type>::json(val[i], oss);
+                    }
+                    oss << "]";
+                }
             };
 
             template<typename T>
@@ -357,6 +466,17 @@ namespace ohm {
                         obj[pair.first] = _dumper<decltype(pair.second)>::dump(pair.second);
                     }
                     return obj;
+                }
+                static void json(const T &val, std::ostringstream &oss) {
+                    oss << "{";
+                    bool comma = false;
+                    for (auto &pair : val) {
+                        if (comma) oss << ", ";
+                        else comma = true;
+                        oss << "\"" << notation::encode(pair.first) << "\": ";
+                        _dumper<decltype(pair.second)>::json(pair.second, oss);
+                    }
+                    oss << "}";
                 }
             };
 
@@ -388,7 +508,13 @@ namespace ohm {
                 }
 
                 Var dump() const override {
-                    return _dumper<T>::dump(*m_value);
+                    return _dumper<Array>::dump(*m_value);
+                }
+
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<Array>::json(*m_value, oss);
+                    return oss.str();
                 }
 
             private:
@@ -425,7 +551,13 @@ namespace ohm {
                 }
 
                 Var dump() const override {
-                    return _dumper<T>::dump(*m_value);
+                    return _dumper<Array>::dump(*m_value);
+                }
+
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<Array>::json(*m_value, oss);
+                    return oss.str();
                 }
 
             private:
@@ -467,7 +599,13 @@ namespace ohm {
                 }
 
                 Var dump() const override {
-                    return _dumper<T>::dump(*m_value);
+                    return _dumper<Array>::dump(*m_value);
+                }
+
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<Array>::json(*m_value, oss);
+                    return oss.str();
                 }
 
             private:
@@ -503,7 +641,13 @@ namespace ohm {
                 }
 
                 Var dump() const override {
-                    return _dumper<T>::dump(*m_value);
+                    return _dumper<Dict>::dump(*m_value);
+                }
+
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<Dict>::json(*m_value, oss);
+                    return oss.str();
                 }
 
             private:
@@ -545,7 +689,13 @@ namespace ohm {
                 }
 
                 Var dump() const override {
-                    return _dumper<T>::dump(*m_value);
+                    return _dumper<Dict>::dump(*m_value);
+                }
+
+                std::string json() const override {
+                    std::ostringstream oss;
+                    _dumper<Dict>::json(*m_value, oss);
+                    return oss.str();
                 }
 
             private:
@@ -652,6 +802,20 @@ namespace ohm {
             inline std::function<Var()> dumper(const char *value) {
                 return [value]() { return _dumper<std::string>::dump(value); };
             }
+
+            template<typename T, typename = typename std::enable_if<support_base_dumper<T>::value>::type>
+            inline std::function<void(std::ostringstream &)> dumper_s(const T &value) {
+                return [&](std::ostringstream & oss) { return _dumper<T>::json(value, oss);};
+            }
+
+            template<typename T, typename = typename std::enable_if<support_base_dumper<T>::value>::type>
+            inline std::function<void(std::ostringstream &)> dumper_s(const T *value) {
+                return [=](std::ostringstream & oss) { return _dumper<T>::json(*value, oss); };
+            }
+
+            inline std::function<void(std::ostringstream &)> dumper_s(const char *value) {
+                return [value](std::ostringstream & oss) { return _dumper<std::string>::json(value, oss); };
+            }
         }
     }
 
@@ -661,6 +825,8 @@ namespace ohm {
     public:
         using Parser = std::function<void(const Var &)>;
         using Dumper = std::function<Var()>;
+        using DumperS = std::function<void(std::ostringstream &)>;
+
         static constexpr uint64_t __MAGIC = 0x8848;
         uint64_t __magic = __MAGIC;
 
@@ -689,27 +855,45 @@ namespace ohm {
                 Dumper dumper = std::get<2>(name_required_parser.second);
                 if (!dumper) continue;
                 obj[name] = dumper();
-                println(obj[name]);
             }
-
-            println(obj);
 
             return obj;
         }
 
+        std::string json() const final {
+            std::ostringstream oss;
+            oss << "{";
+            bool comma = false;
+            for (auto &name_required_parser : __m_fields) {
+                auto &name = name_required_parser.first;
+                DumperS dumper_s = std::get<3>(name_required_parser.second);
+                if (!dumper_s) continue;
+                if (comma) oss << ", ";
+                else comma = true;
+                oss << "\"" << notation::encode(name) << "\": ";
+                dumper_s(oss);
+            }
+            oss << "}";
+
+            return oss.str();
+        }
+
     protected:
+        void bind(const std::string &name, Parser parser, Dumper dumper, DumperS dumper_s, bool required = false) {
+            __m_fields[name] = std::make_tuple(required, parser, dumper, dumper_s);
+        }
         void bind(const std::string &name, Parser parser, Dumper dumper, bool required = false) {
-            __m_fields[name] = std::make_tuple(required, parser, dumper);
+            __m_fields[name] = std::make_tuple(required, parser, dumper, nullptr);
         }
 
         void bind(const std::string &name, Parser parser, bool required = false) {
-            __m_fields[name] = std::make_tuple(required, parser, nullptr);
+            __m_fields[name] = std::make_tuple(required, parser, nullptr, nullptr);
         }
 
         friend class JSONObjectBinder;
 
     private:
-        std::map<std::string, std::tuple<bool, Parser, Dumper>> __m_fields;
+        std::map<std::string, std::tuple<bool, Parser, Dumper, DumperS>> __m_fields;
     };
 
     class JSONObjectBinder {
@@ -718,9 +902,16 @@ namespace ohm {
                   const std::string &name, JSONObject::Parser parser, bool required = false) {
             object.bind(name, parser, required);
         }
+
         void bind(JSONObject &object,
                   const std::string &name, JSONObject::Parser parser, JSONObject::Dumper dumper, bool required = false) {
             object.bind(name, parser, dumper, required);
+        }
+
+        void bind(JSONObject &object, const std::string &name,
+                  JSONObject::Parser parser, JSONObject::Dumper dumper, JSONObject::DumperS dumper_s,
+                  bool required = false) {
+            object.bind(name, parser, dumper, dumper_s, required);
         }
     };
 }
@@ -749,6 +940,7 @@ namespace ohm {
             bind(*_supper, #member, \
                  ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
                  ohm::json::_::dumper(_member), \
+                 ohm::json::_::dumper_s(_member), \
                  ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member); \
@@ -775,6 +967,7 @@ namespace ohm {
             bind(*_supper, json_member, \
                  ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
                  ohm::json::_::dumper(_member), \
+                 ohm::json::_::dumper_s(_member), \
                  ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member); \
@@ -799,6 +992,7 @@ namespace ohm {
             bind(*_supper, #member, \
                  ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
                  ohm::json::_::dumper(_member), \
+                 ohm::json::_::dumper_s(_member), \
                  ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member)
@@ -823,6 +1017,7 @@ namespace ohm {
             bind(*_supper, json_member, \
                  ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
                  ohm::json::_::dumper(_member), \
+                 ohm::json::_::dumper_s(_member), \
                  ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member)

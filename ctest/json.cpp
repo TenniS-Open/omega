@@ -21,7 +21,7 @@ public:
 
 int main() {
     auto json = R"({"b":1.2, "c": "hello", "d": 1231, "o": {}})";
-    auto obj = ohm::json::from_string(json);
+    // auto obj = ohm::json::from_string(json);
 
     ohm::println(json);
 
@@ -29,9 +29,19 @@ int main() {
 
     ohm::println(ohm::sep(", "), a.a, a.b, a.c, a.d, a.e, a.f, a.o);
 
-    a.parse(obj);
+    a.parse_string(json);
 
     ohm::println(ohm::sep(", "), a.a, a.b, a.c, a.d, a.e, a.f, a.o);
+
+    a.c = "[\"A\"]";
+    // Get dump var
+    ohm::Var v = a.dump();
+
+    // Get json
+    std::string s = a.json();
+
+    ohm::println(v);
+    ohm::println(s);
 
     return 0;
 }

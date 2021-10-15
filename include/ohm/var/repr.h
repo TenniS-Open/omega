@@ -39,7 +39,7 @@ namespace ohm {
             for (auto &kv : obj) {
                 if (comma) oss << ", ";
                 else comma = true;
-                oss << '\"' << kv.first << "\": " << repr(kv.second);
+                oss << '\"' << encode(kv.first) << "\": " << repr(kv.second);
             }
             oss << "}";
             return oss.str();
