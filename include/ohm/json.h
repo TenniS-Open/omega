@@ -22,6 +22,8 @@ namespace ohm {
         virtual ~JSONBase() = default;
 
         virtual void parse(const Var &obj) = 0;
+
+        virtual Var dump() const = 0;
     };
 
     namespace json {
@@ -137,6 +139,10 @@ namespace ohm {
                 }
             };
 
+
+            template<typename T, typename Enable = void>
+            class _dumper;
+
             template<typename T>
             struct is_Var_scalar {
                 static constexpr bool value = std::is_integral<T>::value
@@ -153,6 +159,13 @@ namespace ohm {
                                               || std::is_same<T, std::string>::value;
             };
 
+            template<typename T>
+            class _dumper<T, typename std::enable_if<is_Var_scalar<T>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    return Var(val);
+                }
+            };
 
             template<typename T, typename Enable = void>
             class ParserType;
@@ -188,6 +201,10 @@ namespace ohm {
                     }
                 }
 
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
+                }
+
             private:
                 std::string m_name;
                 T *m_value;
@@ -218,6 +235,10 @@ namespace ohm {
                     }
                 }
 
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
+                }
+
             private:
                 std::string m_name;
                 T *m_value;
@@ -238,8 +259,20 @@ namespace ohm {
                     *m_value = obj;
                 }
 
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
+                }
+
             private:
                 T *m_value;
+            };
+
+            template<typename T>
+            class _dumper<T, typename std::enable_if<std::is_base_of<JSONBase, T>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    return val.dump();
+                }
             };
 
             template<typename T>
@@ -254,6 +287,10 @@ namespace ohm {
 
                 void parse(const Var &obj) override {
                     m_value->parse(obj);
+                }
+
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
                 }
 
             private:
@@ -299,6 +336,31 @@ namespace ohm {
             };
 
             template<typename T>
+            class _dumper<T, typename std::enable_if<is_Var_array<T>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    Var obj = ohm::notation::Array();
+                    obj.resize(val.size());
+                    for (size_t i = 0; i < val.size(); ++i) {
+                        obj[i] = _dumper<typename std::decay<decltype(val[i])>::type>::dump(val[i]);
+                    }
+                    return obj;
+                }
+            };
+
+            template<typename T>
+            class _dumper<T, typename std::enable_if<is_Var_dict<T>::value>::type> {
+            public:
+                static Var dump(const T &val) {
+                    Var obj = ohm::notation::Object();
+                    for (auto &pair : val) {
+                        obj[pair.first] = _dumper<decltype(pair.second)>::dump(pair.second);
+                    }
+                    return obj;
+                }
+            };
+
+            template<typename T>
             class ParserType<Array<T>, typename std::enable_if<is_Var_scalar<T>::value>::type>
                     : public JSONBase {
             public:
@@ -323,6 +385,10 @@ namespace ohm {
                         }
                         throw Exception("Can not parse \"" + m_name + "\": " + e.what());
                     }
+                }
+
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
                 }
 
             private:
@@ -356,6 +422,10 @@ namespace ohm {
                         }
                         throw Exception("Can not parse \"" + m_name + "\": " + e.what());
                     }
+                }
+
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
                 }
 
             private:
@@ -396,6 +466,10 @@ namespace ohm {
                     }
                 }
 
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
+                }
+
             private:
                 std::string m_name;
                 Array *m_value;
@@ -426,6 +500,10 @@ namespace ohm {
                         }
                         throw Exception("Can not parse \"" + m_name + "\": " + e.what());
                     }
+                }
+
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
                 }
 
             private:
@@ -466,6 +544,10 @@ namespace ohm {
                     }
                 }
 
+                Var dump() const override {
+                    return _dumper<T>::dump(*m_value);
+                }
+
             private:
                 std::string m_name;
                 Dict *m_value;
@@ -491,6 +573,14 @@ namespace ohm {
                                               || is_Var_array<T>::value
                                               || is_Var_dict<T>::value
                                               || is_Var_with_default<T>::value;
+            };
+
+            template<typename T>
+            struct support_base_dumper {
+                static constexpr bool value = is_Var_scalar<T>::value
+                                              || std::is_base_of<JSONBase, T>::value
+                                              || is_Var_array<T>::value
+                                              || is_Var_dict<T>::value;
             };
 
             template<typename T, typename = typename std::enable_if<support_base_parser<T>::value>::type>
@@ -548,6 +638,20 @@ namespace ohm {
             inline std::function<void(const Var &)> parser(const std::string &name, T &value, const T &default_value) {
                 return parser(name, &value, default_value);
             }
+
+            template<typename T, typename = typename std::enable_if<support_base_dumper<T>::value>::type>
+            inline std::function<Var()> dumper(const T &value) {
+                return [&]() { return _dumper<T>::dump(value);};
+            }
+
+            template<typename T, typename = typename std::enable_if<support_base_dumper<T>::value>::type>
+            inline std::function<Var()> dumper(const T *value) {
+                return [=]() { return _dumper<T>::dump(*value); };
+            }
+
+            inline std::function<Var()> dumper(const char *value) {
+                return [value]() { return _dumper<std::string>::dump(value); };
+            }
         }
     }
 
@@ -556,6 +660,7 @@ namespace ohm {
     class JSONObject : public JSONBase {
     public:
         using Parser = std::function<void(const Var &)>;
+        using Dumper = std::function<Var()>;
         static constexpr uint64_t __MAGIC = 0x8848;
         uint64_t __magic = __MAGIC;
 
@@ -563,8 +668,8 @@ namespace ohm {
             if (obj.type() != notation::type::Object) throw Exception("JSONObject only parse be dict");
             for (auto &name_required_parser : __m_fields) {
                 auto &name = name_required_parser.first;
-                bool required = name_required_parser.second.first;
-                Parser parser = name_required_parser.second.second;
+                bool required = std::get<0>(name_required_parser.second);
+                Parser parser = std::get<1>(name_required_parser.second);
                 auto x = obj[name];
                 if (x.type() == notation::type::Undefined) {
                     if (required) {
@@ -576,14 +681,35 @@ namespace ohm {
             }
         }
 
-    protected:
-        void bind(const std::string &name, Parser parser, bool required = false) {
-            __m_fields[name] = std::make_pair(required, parser);
+        Var dump() const final {
+            Var obj = notation::Object();
+
+            for (auto &name_required_parser : __m_fields) {
+                auto &name = name_required_parser.first;
+                Dumper dumper = std::get<2>(name_required_parser.second);
+                if (!dumper) continue;
+                obj[name] = dumper();
+                println(obj[name]);
+            }
+
+            println(obj);
+
+            return obj;
         }
+
+    protected:
+        void bind(const std::string &name, Parser parser, Dumper dumper, bool required = false) {
+            __m_fields[name] = std::make_tuple(required, parser, dumper);
+        }
+
+        void bind(const std::string &name, Parser parser, bool required = false) {
+            __m_fields[name] = std::make_tuple(required, parser, nullptr);
+        }
+
         friend class JSONObjectBinder;
 
     private:
-        std::map<std::string, std::pair<bool, Parser>> __m_fields;
+        std::map<std::string, std::tuple<bool, Parser, Dumper>> __m_fields;
     };
 
     class JSONObjectBinder {
@@ -591,6 +717,10 @@ namespace ohm {
         void bind(JSONObject &object,
                   const std::string &name, JSONObject::Parser parser, bool required = false) {
             object.bind(name, parser, required);
+        }
+        void bind(JSONObject &object,
+                  const std::string &name, JSONObject::Parser parser, JSONObject::Dumper dumper, bool required = false) {
+            object.bind(name, parser, dumper, required);
         }
     };
 }
@@ -616,7 +746,10 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            bind(*_supper, #member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, #member, \
+                 ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
+                 ohm::json::_::dumper(_member), \
+                 ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member); \
     type member
@@ -639,7 +772,10 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            bind(*_supper, json_member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, json_member, \
+                 ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
+                 ohm::json::_::dumper(_member), \
+                 ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member); \
     type member
@@ -660,7 +796,10 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            bind(*_supper, #member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, #member, \
+                 ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
+                 ohm::json::_::dumper(_member), \
+                 ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member)
 
@@ -681,7 +820,10 @@ namespace ohm {
                 throw ohm::Exception("Bind member out of class JSONObject"); \
             } \
             auto &_member = _supper->member; \
-            bind(*_supper, json_member, ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), ## __VA_ARGS__); \
+            bind(*_supper, json_member, \
+                 ohm::json::_::parser(ohm::classname<cls>() + "::" + #member, _member), \
+                 ohm::json::_::dumper(_member), \
+                 ## __VA_ARGS__); \
         } \
     } _ohm_json_concat(__bind_, member)
 

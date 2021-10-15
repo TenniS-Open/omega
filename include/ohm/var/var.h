@@ -247,6 +247,9 @@ namespace ohm {
         }
 
         Var &operator=(const Var &var) {
+            if (this == &var) {
+                return *this;
+            }
             m_var = var.m_var;
             if (m_notifier) {
                 m_notifier(m_var);
@@ -255,6 +258,11 @@ namespace ohm {
         }
 
         Var &operator=(Var &&var) {
+            if (this->m_notifier) {
+                m_var = var.m_var;
+                m_notifier(m_var);
+                return *this;
+            }
             this->m_var = std::move(var.m_var);
             this->m_notifier = std::move(var.m_notifier);
             return *this;
