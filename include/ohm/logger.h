@@ -6,6 +6,9 @@
 #define OMEGA_LOGGER_H
 
 #include <algorithm>
+#include <ostream>
+#include <sstream>
+#include <fstream>
 
 #include "loglevel.h"
 #include "print.h"
@@ -13,6 +16,7 @@
 #include "except.h"
 #include "time.h"
 #include "platform.h"
+#include "filesys.h"
 
 #if OHM_PLATFORM_OS_ANDROID
 #include "sys/android.h"
@@ -130,6 +134,10 @@ namespace ohm {
         explicit Logger(const std::string &tag, LogLevel level = LOG_INFO)
             : m_tag(tag), m_level(level) {
         }
+
+        ~Logger() override {
+            delete m_log2file;
+        }
         
         void print(const std::string &msg) const final {
             log2console(msg);
@@ -151,24 +159,6 @@ namespace ohm {
             return msg;
         }
 
-        void log2console(std::ostream &console, const std::string &msg) const {
-            println(console, msg);
-        }
-
-        void log2console(const std::string &msg) const {
-            log2console(std::cout, msg);
-        }
-
-        void log2file(const std::string &msg) const {
-            // TODO: add file writer
-        }
-
-        void log2platform(LogLevel level, const std::string &msg) const {
-#if OHM_PLATFORM_OS_ANDROID
-            android::log(level, m_tag, msg);
-#endif
-        }
-
         LogStream operator()(LogLevel level) const { return LogStream(level, *this); }
 
         LogLevel change_level(LogLevel level) {
@@ -179,9 +169,84 @@ namespace ohm {
 
         LogLevel level() const { return m_level; }
 
+        void stream2file(const std::string &filename) {
+            if (filename.empty()) {
+                m_tofile = "";
+                m_current = "";
+                delete m_log2file;
+                m_log2file = nullptr;
+                return;
+            }
+            m_tofile = get_absolute(getcwd(), filename);
+            auto dot = m_tofile.rfind('.');
+            if (dot == std::string::npos) {
+                m_current_prefix = m_tofile;
+                m_current_suffix = "";
+            } else {
+                m_current_prefix = m_tofile.substr(0, dot);
+                m_current_suffix = m_tofile.substr(dot);
+            }
+        }
+
     private:
         LogLevel m_level;
         std::string m_tag = "omega";
+
+        std::string m_tofile;
+
+        std::string m_current_prefix;
+        std::string m_current_suffix;
+        mutable std::string m_current;
+        mutable std::ostream *m_log2file = nullptr;
+
+        void log2console(std::ostream &console, const std::string &msg) const {
+            println(console, msg);
+        }
+
+        void log2console(const std::string &msg) const {
+            log2console(std::cout, msg);
+        }
+
+        void log2file(const std::string &msg) const {
+            if (m_tofile.empty()) return;
+
+            // check current
+            auto current = current_with_date();
+            if (current != m_current) {
+                delete m_log2file;
+                m_log2file = nullptr;
+
+                auto root = cut_path_tail(current);
+                mkdir(root);
+
+                auto file = new std::ofstream(current, std::ios_base::app);
+                if (!file->is_open()) {
+                    delete file;
+                    log2console("[ERROR] Can not open log: " + current);
+                } else {
+                    m_log2file = file;
+                    m_current = current;
+                }
+            }
+
+            // write log
+            if (m_log2file) {
+                println(*m_log2file, msg);
+            }
+        }
+
+        void log2platform(LogLevel level, const std::string &msg) const {
+#if OHM_PLATFORM_OS_ANDROID
+            android::log(level, m_tag, msg);
+#endif
+        }
+
+        std::string current_with_date() const {
+            auto date = to_string(now(), "%Y-%m-%d");
+            std::ostringstream oss;
+            oss << m_current_prefix << "_" << date << m_current_suffix;
+            return oss.str();
+        }
     };
 
     inline bool LogStream::enable() const {
