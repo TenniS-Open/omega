@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <vector>
 #include <regex>
+#include <initializer_list>
 
 #pragma push_macro("ACCESS")
 #pragma push_macro("MKDIR")
@@ -281,8 +282,63 @@ namespace ohm {
         return bool((S_IFREG & buf.st_mode) != 0);
     }
 
+    inline std::string strip_path_head(const std::string &path) {
+        size_t i = 0;
+        while (i < path.size()) {
+            if (path[i] == '\\' || path[i] == '/') ++i;
+            else break;
+        }
+        return path.substr(i);
+    }
+
+    inline std::string strip_path_tail(const std::string &path) {
+        size_t n = path.length();
+        while (n > 0) {
+            auto i = n - 1;
+            if (path[i] == '\\' || path[i] == '/') --n;
+            else break;
+        }
+        return path.substr(0, n);
+    }
+
+    inline std::string strip_path(const std::string &path) {
+        size_t n = path.length();
+        while (n > 0) {
+            auto i = n - 1;
+            if (path[i] == '\\' || path[i] == '/') --n;
+            else break;
+        }
+        size_t i = 0;
+        while (i < n) {
+            if (path[i] == '\\' || path[i] == '/') ++i;
+            else break;
+        }
+        return path.substr(i, n - i);
+    }
+
     inline std::string join_path(const std::vector<std::string> &paths) {
-        return join(paths, file::sep());
+        if (paths.empty()) return "";
+        std::ostringstream oss;
+        oss << strip_path_tail(paths[0]);
+        for (size_t i = 1; i < paths.size(); ++i) {
+            oss << file::sep();
+            oss << strip_path(paths[i]);
+        }
+        return oss.str();
+    }
+
+    inline std::string join_path(const std::initializer_list<std::string> &paths) {
+        auto it = paths.begin();
+        if (it == paths.end()) return "";
+        std::ostringstream oss;
+        oss << strip_path_tail(*it);
+        ++it;
+        while (it != paths.end()) {
+            oss << file::sep();
+            oss << strip_path(*it);
+            ++it;
+        }
+        return oss.str();
     }
 
     class stack_cd {
