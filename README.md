@@ -1,5 +1,7 @@
 # omega (๑•̀ω•́ ๑)
 
+[![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
+
 #### 介绍
 只包含头文件的常用模块库。
 

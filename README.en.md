@@ -1,5 +1,7 @@
 # omega (๑•̀ω•́ ๑)
 
+[![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
+
 #### Description
 header only library, providing common useful module.
 
