@@ -302,6 +302,7 @@ namespace ohm {
                     {"nil", pack_nil},
                     {"binary", pack_error},
                     {"file", pack_file},
+                    {"base64", pack_base64},
             };
             auto it = command_map.find(command);
             if (it == command_map.end()) return nullptr;

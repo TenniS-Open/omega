@@ -11,6 +11,7 @@
 #include "stream.h"
 #include "../print.h"
 #include "../filesys.h"
+#include "../base64.h"
 
 #include <fstream>
 
@@ -62,6 +63,13 @@ namespace ohm {
                 throw VarIOExcpetion(ctx, sprint(args[1], " is not a valid file."));
             }
             return data;
+        }
+
+        static inline Var pack_base64(const Context &ctx, const std::vector<std::string> &args) {
+            if (args.size() != 2) {
+                throw VarIOExcpetion(ctx, "Command format error, should be @base64@...");
+            }
+            return base64_decode(args[1].data(), args[1].size());
         }
     }
 }
