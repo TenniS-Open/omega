@@ -26,6 +26,9 @@
 #include <sstream>
 #include <functional>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wundefined-inline"
+
 namespace ohm {
     template<typename T, typename=void>
     struct is_var_assignable : public std::false_type {
@@ -800,6 +803,8 @@ namespace ohm {
 
 
 }
+
+#pragma GCC diagnostic pop
 
 #pragma pop_macro("CHECK")
 #pragma pop_macro("SWITCH")
