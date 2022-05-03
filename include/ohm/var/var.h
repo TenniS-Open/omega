@@ -26,8 +26,13 @@
 #include <sstream>
 #include <functional>
 
+#include "../platform.h"
+
+#if OHM_PLATFORM_CC_GCC || OHM_PLATFORM_CC_MINGW
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wundefined-inline"
+#endif
 
 namespace ohm {
     template<typename T, typename=void>
@@ -804,7 +809,9 @@ namespace ohm {
 
 }
 
+#if OHM_PLATFORM_CC_GCC || OHM_PLATFORM_CC_MINGW
 #pragma GCC diagnostic pop
+#endif
 
 #pragma pop_macro("CHECK")
 #pragma pop_macro("SWITCH")

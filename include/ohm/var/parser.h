@@ -376,7 +376,7 @@ namespace ohm {
         }
 
         inline Var read_json(Context &ctx, const char *buff, size_t size) {
-            json_iterator it(buff, size);
+            json_iterator it(buff, int(size));
             return parse_value(ctx, it);
         }
 
