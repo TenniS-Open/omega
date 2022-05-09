@@ -14,7 +14,7 @@
 
 namespace ohm {
     /**
-     * TODO: support fps control
+     * Start a thread do something all the time.
      */
     class LoopThread {
     public:
@@ -26,9 +26,11 @@ namespace ohm {
         };
 
         struct FPS {
-            int fps;
+            using Type = float;
 
-            FPS(int fps) : fps(fps) {}
+            Type fps;
+
+            FPS(Type fps) : fps(fps) {}
         };
 
         class Return : public std::exception {
@@ -47,7 +49,9 @@ namespace ohm {
         template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
                 is_action<FUNC, ARGS...>::value>::type>
         explicit LoopThread(Status status, FPS fps, FUNC &&func, ARGS &&... args)
-                : m_action(std::forward<FUNC>(func), std::forward<ARGS>(args)...), m_status(status), m_fps(fps.fps) {
+                : m_action(void_bind(std::forward<FUNC>(func), std::forward<ARGS>(args)...))
+                , m_status(status)
+                , m_fps(fps.fps) {
             m_thread = std::thread(&self::operating, this);
         }
 
@@ -63,7 +67,7 @@ namespace ohm {
 
         template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
                 is_action<FUNC, ARGS...>::value>::type>
-        explicit LoopThread(int fps, FUNC &&func, ARGS &&... args)
+        explicit LoopThread(FPS::Type fps, FUNC &&func, ARGS &&... args)
                 : self(RUNNING, FPS(fps), std::forward<FUNC>(func), std::forward<ARGS>(args)...) {}
 
         template<typename FUNC, typename... ARGS, typename=typename std::enable_if<
@@ -135,12 +139,16 @@ namespace ohm {
             join();
         }
 
-        void setFPS(int fps) {
+        void setFPS(FPS::Type fps) {
             m_fps = fps;
         }
 
-        int getFPS() {
+        FPS::Type getFPS() {
             return m_fps;
+        }
+
+        Status status() const {
+            return Status(m_status.load());
         }
 
     private:
@@ -148,7 +156,7 @@ namespace ohm {
         VoidOperator m_action;
         std::condition_variable_any m_wake_cond;
         std::atomic<int> m_status;
-        std::atomic<int> m_fps;
+        std::atomic<FPS::Type> m_fps;
 
         time_point m_last_tick;
 
@@ -190,12 +198,12 @@ namespace ohm {
 
         void delay() {
             auto now_tick = now();
-            int fps = m_fps;
+            FPS::Type fps = m_fps;
             if (fps == 0) {
                 m_last_tick = now_tick; // still save last tick
                 return;
             }
-            auto wait_until = m_last_tick + time::us(1000000 / fps);
+            auto wait_until = m_last_tick + time::us(int64_t(1000000.00 / fps));
             m_last_tick = now_tick > wait_until ? now_tick : wait_until;
             std::this_thread::sleep_until(wait_until);
         }
