@@ -9,6 +9,8 @@
 #include <ostream>
 #include <sstream>
 #include <fstream>
+#include <atomic>
+#include <mutex>
 
 #include "loglevel.h"
 #include "print.h"
@@ -132,7 +134,7 @@ namespace ohm {
     class Logger : public PrintStream {
     public:
         explicit Logger(const std::string &tag, LogLevel level = LOG_INFO)
-            : m_tag(tag), m_level(level) {
+            : m_tag(tag), m_level(level), m_enable_to_file(false) {
         }
 
         ~Logger() override {
@@ -170,11 +172,14 @@ namespace ohm {
         LogLevel level() const { return m_level; }
 
         void stream2file(const std::string &filename) {
+            std::lock_guard<decltype(m_mutex_file)> _lock(m_mutex_file);
+
             if (filename.empty()) {
                 m_tofile = "";
                 m_current = "";
                 delete m_log2file;
                 m_log2file = nullptr;
+                m_enable_to_file.store(false);
                 return;
             }
             m_tofile = get_absolute(getcwd(), filename);
@@ -186,18 +191,21 @@ namespace ohm {
                 m_current_prefix = m_tofile.substr(0, dot);
                 m_current_suffix = m_tofile.substr(dot);
             }
+            m_enable_to_file.store(true);
         }
 
     private:
         LogLevel m_level;
         std::string m_tag = "omega";
 
+        std::atomic<bool> m_enable_to_file;
         std::string m_tofile;
 
         std::string m_current_prefix;
         std::string m_current_suffix;
         mutable std::string m_current;
         mutable std::ostream *m_log2file = nullptr;
+        mutable std::mutex m_mutex_file;
 
         void log2console(std::ostream &console, const std::string &msg) const {
             println(console, msg);
@@ -208,6 +216,11 @@ namespace ohm {
         }
 
         void log2file(const std::string &msg) const {
+            if (!m_enable_to_file.load()) {
+                return;
+            }
+            std::lock_guard<decltype(m_mutex_file)> _lock(m_mutex_file);
+
             if (m_tofile.empty()) return;
 
             // check current
