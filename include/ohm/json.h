@@ -199,7 +199,7 @@ namespace ohm {
                 }
 
                 static void json(const T &val, std::ostringstream &oss) {
-                    oss << val ? "true" : "false";
+                    oss << (val ? "true" : "false");
                 }
             };
 
