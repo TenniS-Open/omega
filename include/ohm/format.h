@@ -33,7 +33,7 @@ namespace ohm {
             if (right == std::string::npos) break;
             left = right + 1;
         }
-        return std::move(result);
+        return result;
     }
 
     inline std::vector<std::string> split(const std::string &str, const std::string &sep, size_t size = 0) {
@@ -47,7 +47,7 @@ namespace ohm {
             if (right == std::string::npos) break;
             left = right + 1;
         }
-        return std::move(result);
+        return result;
     }
 
     inline std::string join(const std::vector<std::string> &list, const std::string &sep) {
@@ -119,14 +119,14 @@ namespace ohm {
         for (auto &ch : str) {
             ch = char(tolower(ch));
         }
-        return std::move(str);
+        return str;
     }
 
     inline std::string to_upper(std::string str) {
         for (auto &ch : str) {
             ch = char(toupper(ch));
         }
-        return std::move(str);
+        return str;
     }
 }
 

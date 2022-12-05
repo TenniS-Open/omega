@@ -115,7 +115,7 @@ namespace ohm {
         if (pwd == nullptr) return std::string();
         std::string pwd_str = pwd;
         free(pwd);
-        return std::move(pwd_str);
+        return pwd_str;
     }
 
     inline std::string getself() {

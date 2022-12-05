@@ -126,15 +126,15 @@ namespace ohm {
 
         const Logger *operator->() { return m_logger; }
     private:
-        const Logger *m_logger;
         LogLevel m_level;
+        const Logger *m_logger;
     };
 
 
     class Logger : public PrintStream {
     public:
         explicit Logger(const std::string &tag, LogLevel level = LOG_INFO)
-            : m_tag(tag), m_level(level), m_enable_to_file(false) {
+            : m_level(level), m_tag(tag), m_enable_to_file(false) {
         }
 
         ~Logger() override {
