@@ -140,6 +140,10 @@ namespace ohm {
         ~Logger() override {
             delete m_log2file;
         }
+
+        void tag(std::string tag) {
+            m_tag = std::move(tag);
+        }
         
         void print(const std::string &msg) const final {
             log2console(msg);

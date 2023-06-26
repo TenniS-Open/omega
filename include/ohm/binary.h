@@ -110,7 +110,7 @@ namespace ohm {
         Binary clone() const {
             Binary doly;
             doly.write(self::data(), self::size());
-            return std::move(doly);
+            return doly;
         }
 
         void memset(char ch) {

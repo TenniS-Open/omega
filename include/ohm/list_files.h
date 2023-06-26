@@ -67,7 +67,7 @@ namespace ohm {
 
             closedir(handle);
 #endif
-            return std::move(result);
+            return result;
         }
 
 

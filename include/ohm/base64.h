@@ -44,7 +44,7 @@ namespace ohm {
             codes.push_back(base64_encode_map[bin_code & 0x3f]);
         }
         for (size_t i = 0; i < extending; ++i) codes[codes.size() - 1 - i] = '=';
-        return std::move(codes);
+        return codes;
     }
 
     inline Binary base64_encode(const char *bin, size_t size) {
@@ -67,7 +67,7 @@ namespace ohm {
         {
             char ch = buff[i];
             if (ch & 0x80) ohm_log(ohm::LOG_ERROR, "unrecognized code: ", ch);
-            auto idx = base64_decode_map[ch];
+            auto idx = base64_decode_map[int8_t(ch)];
             if (idx < 0)
             {
                 if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') continue;
@@ -86,7 +86,7 @@ namespace ohm {
         if (bin_code != 0) ohm_log(ohm::LOG_ERROR, "length of codes is not a multiplier of 4");
         if (equal_sign_count > 2) ohm_log(ohm::LOG_ERROR, "equal sign count mismatch vs. ", equal_sign_count);
         for (int i = 0; i < equal_sign_count; ++i) bin.pop_back();
-        return std::move(bin);
+        return bin;
     }
 
     inline Binary base64_decode(const Binary &buff) {

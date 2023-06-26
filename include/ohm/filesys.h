@@ -100,7 +100,7 @@ namespace ohm {
     inline bool copy(const std::string &fromfile, const std::string &tofile, bool force) {
 #if OHM_PLATFORM_OS_WINDOWS
         return bool(CopyFileA(fromfile.c_str(), tofile.c_str(), !force));
-#elif OHM_PLATFORM_OS_LINUX
+#elif OHM_PLATFORM_OS_LINUX && !OHM_PLATFORM_OS_ANDROID
         return std::system(sprint(force ? "cp -f " : "cp ", fromfile, ' ', tofile).c_str()) == 0;
 #else
         std::ifstream input(fromfile, std::ios::binary);
