@@ -107,6 +107,16 @@ namespace ohm {
             };
             return writef(var, writer, format);
         }
+
+        inline Var loads(const std::string &s, const std::string &sysroot = "") {
+            auto data = s.data();
+            auto size = s.size();
+            return readf(VarMemoryReader(data, size), sysroot);
+        }
+
+        inline std::string dumps(const Var &var) {
+            return var.dumps();
+        }
     }
 }
 

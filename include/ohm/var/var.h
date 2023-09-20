@@ -18,6 +18,7 @@
 
 #include "notation.h"
 #include "repr.h"
+#include "dumps.h"
 #include "cast.h"
 
 #include "varexception.h"
@@ -736,6 +737,35 @@ namespace ohm {
             return repr();
         }
 
+        std::string dumps(const std::string &indent = "") const {
+            if (!m_var) return "\"@undefined\"";
+            ID_SWITCH(m_var->type)
+                ID_DEFAULT
+                    return "\"@" + notation::type_string(type()) + "\"";
+                ID_CASE(notation::type::None)
+                    return "null";
+                ID_CASE(notation::type::Boolean)
+                    return content ? "true" : "false";
+                ID_CASE(notation::type::String)
+                    return notation::dumps(content);
+                ID_CASE(notation::type::Array)
+                    return notation::dumps(content, indent);
+                ID_CASE(notation::type::Object)
+                    return notation::dumps(content, indent);
+                ID_CASE(notation::type::Scalar)
+                    SWITCH_TYPE(m_var->type)
+                        CASE_TYPE_ANY(return notation::scalar_repr(element.ref<type>()))
+                    END_TYPE
+                ID_CASE(notation::type::Binary)
+                    return notation::dumps(content);
+                ID_CASE(notation::type::Vector)
+                    SWITCH_TYPE(m_var->type)
+                        CASE_TYPE_ANY(return notation::dumps(element.data<type>(), element.size(), indent))
+                    END_TYPE
+            ID_END
+            return "";
+        }
+
         static Var From(notation::Element::shared element) {
             return Var(std::move(element));
         }
@@ -760,6 +790,7 @@ namespace ohm {
         std::function<void(const notation::Element::shared &)> m_notifier;
 
         friend std::string notation::repr(notation::Element::shared element);
+        friend std::string notation::dumps(notation::Element::shared element, const std::string &indent);
     };
 
     template<typename T>
@@ -794,6 +825,10 @@ namespace ohm {
     namespace notation {
         inline std::string repr(Element::shared element) {
             return Var(element).repr();
+        }
+
+        inline std::string dumps(Element::shared element, const std::string &indent) {
+            return Var(element).dumps(indent);
         }
     }
 
