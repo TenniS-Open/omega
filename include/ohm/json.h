@@ -178,7 +178,7 @@ namespace ohm {
 
             template<typename T>
             class _dumper<T, typename std::enable_if<
-                    std::is_integral<T>::value && !std::is_same<T, bool>::value
+                    (std::is_integral<T>::value && !std::is_same<T, bool>::value)
                     || std::is_floating_point<T>::value
                     >::type> {
             public:
