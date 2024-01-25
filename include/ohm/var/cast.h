@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <string>
 #include <climits>
+#include <limits>
 
 namespace ohm {
     namespace notation {

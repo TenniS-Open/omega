@@ -23,7 +23,9 @@ namespace ohm {
 
         virtual void parse(const Var &obj) = 0;
 
-        virtual Var dump() const = 0;
+        virtual Var dump() const {
+            return {};
+        };
 
         virtual std::string json() const {
             return dump().repr();
@@ -924,7 +926,7 @@ namespace ohm {
  * @param [in] cls class name of binding, always be the name of defining class
  * @param [in] defined type base json allowed type.
  * @param [in] member name to bind and defined
- * @param [optinal] required if this member are required.
+ * @param [optional] required if this member are required.
  * @notice type support: integer, floating point, std::string, bool, JSONBase or JSONObject
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
@@ -951,7 +953,7 @@ namespace ohm {
  * @param [in] defined type base json allowed type.
  * @param [in] member name defined
  * @param [in] json_member name to bind in json
- * @param [optinal] required if this member are required.
+ * @param [optional] required if this member are required.
  * @notice type support: integer, floating point, std::string, bool, JSONBase or JSONObject
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
@@ -976,7 +978,7 @@ namespace ohm {
 /**
  * @param [in] cls class name of binding, always be the name of defining class
  * @param [in] member predefined member to bind with json
- * @param [optinal] required if this member are required.
+ * @param [optional] required if this member are required.
  * @notice type support: integer, floating point, std::string, bool, JSONBase or JSONObject
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
@@ -1001,7 +1003,7 @@ namespace ohm {
  * @param [in] cls class name of binding, always be the name of defining class
  * @param [in] member predefined
  * @param [in] json_member name to bind in json
- * @param [optinal] required if this member are required.
+ * @param [optional] required if this member are required.
  * @notice type support: integer, floating point, std::string, bool, JSONBase or JSONObject
  *     and json::Array<T> or json::Dict<T> with T can be above supported types.
  */
