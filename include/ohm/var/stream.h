@@ -39,7 +39,7 @@ header := <int32:fake><int32:var_magic>
 module := <header:header><var>
 <module>
 ```
-The `module.header.var_magic` is `0x19900714`。
+The `module.header.var_magic` is `0x19900714`.
  */
 
 #include <exception>

@@ -147,7 +147,7 @@ namespace ohm {
             bool slant = false;
             int unicode_index = 0;
             char unicode = 0;
-            while (++it != it.end()) {
+            while (++it, it != it.end()) {
                 if (unicode_index > 0) {
                     int ch = char2hex(*it);
                     if (ch < 0) throw VarIOExcpetion(ctx, "syntax error: unrecognized unicode");
@@ -248,7 +248,7 @@ namespace ohm {
             Var value = notation::Array();
             auto it = beg;
             size_t index = 0;
-            while (++it != it.end()) {
+            while (++it, it != it.end()) {
                 it = jump_space(it);
                 if (it == it.end() || *it == ']') break;
                 ctx.push("[", index, "]");
@@ -271,7 +271,7 @@ namespace ohm {
             if (*beg != '{') throw VarIOExcpetion(ctx, std::string("syntax error: dict begin with ") + *beg);
             Var value = notation::Object();
             auto it = beg;
-            while (++it != it.end()) {
+            while (++it, it != it.end()) {
                 it = jump_space(it);
                 if (it == it.end() || *it == '}') break;
                 std::string local_key = parse_string(ctx, it);

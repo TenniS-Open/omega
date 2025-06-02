@@ -223,12 +223,12 @@ namespace ohm {
 
     template<typename... Args>
     inline std::string sprintln(const Args &..._) {
-        return sprint(sprint(_...), "\n");
+        return sprint(sprint(_..., "\n"));
     }
 
     template<typename... Args>
     inline void println(const Args &..._) {
-        std::cout << sprint(sprint(_...), "\n");
+        std::cout << sprint(sprint(_..., "\n"));
         std::cout.flush();
     }
 
@@ -239,7 +239,7 @@ namespace ohm {
 
     template<typename... Args>
     inline void println(std::ostream &stream, const Args &..._) {
-        stream_print(stream, sprint(_...), "\n");
+        stream_print(stream, sprint(_..., "\n"));
         stream.flush();
     }
 
@@ -252,7 +252,7 @@ namespace ohm {
     template<typename T, typename... Args,
             typename = typename std::enable_if<std::is_base_of<PrintStream, T>::value>::type>
     inline void println(const T &stream, const Args &..._) {
-        stream.print(sprint(sprint(_...), "\n"));
+        stream.print(sprint(sprint(_..., "\n")));
     }
 
     template <typename T>

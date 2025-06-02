@@ -138,7 +138,7 @@ namespace ohm {
         }
 
         ~Logger() override {
-            delete m_log2file;
+            stream2file("");
         }
 
         void tag(std::string tag) {

@@ -10,6 +10,7 @@
 #include "platform.h"
 #include "macro.h"
 
+#include <fstream>
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
@@ -339,6 +340,16 @@ namespace ohm {
             ++it;
         }
         return oss.str();
+    }
+
+    inline void soft_touch(const std::string &name) {
+        if (isfile(name)) {
+            return;
+        } else {
+            auto dir = cut_path_tail(name);
+            if (!isdir(dir)) mkdir(dir);
+            std::ofstream file(name, std::ios::app);
+        }
     }
 
     class stack_cd {

@@ -7,6 +7,7 @@
 
 #include "../platform.h"
 #include <iomanip>
+#include <sstream>
 
 #if OHM_PLATFORM_OS_WINDOWS
 
