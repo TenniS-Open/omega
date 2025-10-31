@@ -45,11 +45,19 @@ namespace ohm {
             return oss.str();
         }
 
-        template<typename T, typename=typename std::enable_if<
-                std::is_integral<T>::value || std::is_floating_point<T>::value>::type>
+        template<typename T, typename std::enable_if<
+                std::is_integral<T>::value, int>::type = 0>
         inline std::string repr(T t) {
             std::ostringstream oss;
             oss << t;
+            return oss.str();
+        }
+
+        template<typename T, typename std::enable_if<
+                std::is_floating_point<T>::value, int>::type = 0>
+        inline std::string repr(T t) {
+            std::ostringstream oss;
+            oss << std::setprecision(16) << double(t);
             return oss.str();
         }
 

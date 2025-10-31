@@ -86,7 +86,7 @@ namespace ohm {
                     oss << std::endl << indent;
                 }
             }
-            oss << indent << "}";
+            oss << "}";
             return oss.str();
         }
 

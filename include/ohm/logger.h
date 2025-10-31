@@ -44,13 +44,13 @@ namespace ohm {
      */
     inline const char *log_string(LogLevel level) {
         switch (level) {
-            default:            return "[       ]";
-            case LOG_NONE:      return "[       ]";
-            case LOG_DEBUG:     return "[DEBUG]  ";
-            case LOG_INFO:      return "[INFO]   ";
-            case LOG_WARNING:   return "[WARNING]";
-            case LOG_ERROR:     return "[ERROR]  ";
-            case LOG_FATAL:     return "[FATAL]  ";
+            default:            return "[     ]";
+            case LOG_NONE:      return "[     ]";
+            case LOG_DEBUG:     return "[DEBUG]";
+            case LOG_INFO:      return "[INFO] ";
+            case LOG_WARNING:   return "[WARN] ";
+            case LOG_ERROR:     return "[ERROR]";
+            case LOG_FATAL:     return "[FATAL]";
         }
     }
 

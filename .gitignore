@@ -1,3 +1,7 @@
+# Project
+/.idea/
+/cmake-build-*/
+
 # Prerequisites
 *.d
 
@@ -6,6 +10,7 @@
 *.lo
 *.o
 *.obj
+*.pyc
 
 # Precompiled Headers
 *.gch
@@ -30,3 +35,9 @@
 *.exe
 *.out
 *.app
+
+# Media
+*.mp4
+*.avi
+*.mp3
+*.wav

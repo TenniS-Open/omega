@@ -45,6 +45,7 @@ namespace ohm {
 #undef TRUE
 #undef FALSE
 #undef BOOL
+#undef RGB
 
 using VOID = void;
 using BOOL = int32_t;
